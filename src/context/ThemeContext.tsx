@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { db } from '../services/firebaseConfig';
 
 export type ThemeColors = {
   background: string;
@@ -78,8 +80,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     return saved ? saved === 'dark' : true;
   });
   const [isCalendarView, setIsCalendarView] = useState<boolean>(() => window.localStorage.getItem('calendarView') === 'true');
-  const [autoApproveTournament, setAutoApproveTournament] = useState<boolean>(() => window.localStorage.getItem('autoApproveTournament') === 'true');
-  const [openMatchCreation, setOpenMatchCreation] = useState<boolean>(() => window.localStorage.getItem('openMatchCreation') === 'true');
+  const [autoApproveTournament, setAutoApproveTournament] = useState<boolean>(false);
+  const [openMatchCreation, setOpenMatchCreation] = useState<boolean>(false);
   const [fontSize, setFontSizeState] = useState<FontSize>(() => {
     const saved = window.localStorage.getItem('fontSize');
     return saved === 'small' || saved === 'normal' || saved === 'large' ? saved : 'normal';
@@ -102,6 +104,16 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     root.style.setProperty('--font-scale', String(fontScale));
     document.body.style.backgroundColor = colors.background;
   }, [colors, fontScale, isDarkMode, primaryColor]);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'config', 'settings'), (snapshot) => {
+      const data = snapshot.exists() ? snapshot.data() : {};
+      setAutoApproveTournament(typeof data.autoApproveTournament === 'boolean' ? data.autoApproveTournament : false);
+      setOpenMatchCreation(typeof data.openMatchCreation === 'boolean' ? data.openMatchCreation : false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const value = useMemo<ThemeContextType>(() => ({
     primaryColor,
@@ -127,18 +139,20 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     },
     autoApproveTournament,
     toggleAutoApproveTournament: () => {
-      setAutoApproveTournament((prev) => {
-        const next = !prev;
-        window.localStorage.setItem('autoApproveTournament', String(next));
-        return next;
+      const next = !autoApproveTournament;
+      setAutoApproveTournament(next);
+      void setDoc(doc(db, 'config', 'settings'), { autoApproveTournament: next }, { merge: true }).catch((error) => {
+        console.error('Error saving autoApproveTournament:', error);
+        setAutoApproveTournament(!next);
       });
     },
     openMatchCreation,
     toggleOpenMatchCreation: () => {
-      setOpenMatchCreation((prev) => {
-        const next = !prev;
-        window.localStorage.setItem('openMatchCreation', String(next));
-        return next;
+      const next = !openMatchCreation;
+      setOpenMatchCreation(next);
+      void setDoc(doc(db, 'config', 'settings'), { openMatchCreation: next }, { merge: true }).catch((error) => {
+        console.error('Error saving openMatchCreation:', error);
+        setOpenMatchCreation(!next);
       });
     },
     fontSize,
