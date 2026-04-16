@@ -1,288 +1,238 @@
-.dashboard-page {
+.matches-page {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-.page-header {
-  padding: 20px 16px 12px;
+.matches-scroll {
+  padding-bottom: 110px;
 }
 
-.page-header h1 {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--text-primary);
+.matches-list {
+  padding: 16px;
 }
 
-/* Calendar Bar */
-.calendar-bar {
+.matches-loading {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 8px 16px;
+  justify-content: center;
+  padding-top: 60px;
+}
+
+.matches-calendar-bar {
+  display: flex;
+  padding: 14px 0;
   border-bottom: 1px solid var(--border-color);
-  color: var(--text-primary);
 }
 
-.days-scroll {
+.matches-calendar-icon-wrap {
+  padding: 0 16px;
   display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  flex: 1;
+  align-items: center;
+  border-right: 1px solid var(--border-color);
+  margin-right: 8px;
 }
-.days-scroll::-webkit-scrollbar { display: none; }
 
-.day-col {
+.matches-calendar-days {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding-right: 16px;
+  scrollbar-width: none;
+}
+
+.matches-calendar-days::-webkit-scrollbar {
+  display: none;
+}
+
+.matches-calendar-day {
+  min-width: 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 48px;
-  padding: 8px 4px;
-  cursor: pointer;
-  border: none;
-  background: none;
-  border-radius: 12px;
-  transition: all 0.2s;
+}
+
+.matches-calendar-day-name {
+  margin-bottom: 6px;
   color: var(--text-secondary);
-}
-
-.day-col.active {
-  color: var(--accent, var(--primary-color));
-}
-
-.day-col .day-name {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.day-col .day-num {
-  font-size: 18px;
+  font-size: calc(11px * var(--font-scale));
   font-weight: 700;
-  width: 36px;
-  height: 36px;
+}
+
+.matches-calendar-circle {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 6px;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  margin: 4px 0;
-  color: var(--text-primary);
-  transition: all 0.2s;
-}
-
-.day-col.active .day-num {
-  background-color: #111827;
-  color: #fff;
-}
-
-.day-col .day-month {
-  font-size: 10px;
-  font-weight: 500;
-}
-
-/* Match Cards */
-.match-card {
-  background: var(--surface-color);
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
-  margin-bottom: 14px;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.2s;
+  background: var(--surface-color);
+  color: var(--text-primary);
+  font-size: calc(17px * var(--font-scale));
+  font-weight: 900;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
-.match-card:active {
-  transform: scale(0.98);
+.matches-calendar-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--bg-color);
 }
 
-.match-card.mine {
-  border-width: 2px;
+.matches-calendar-month {
+  color: var(--text-secondary);
+  font-size: calc(11px * var(--font-scale));
 }
 
-.match-card.tournament {
-  background-color: rgba(212, 160, 23, 0.03);
+.matches-card {
+  width: 100%;
+  text-align: left;
+  padding: 20px;
+  margin-bottom: 16px;
+  border-radius: 24px;
+  background: var(--surface-color);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
-.card-header {
+.matches-card:active {
+  transform: scale(0.985);
+}
+
+.matches-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 
-.card-title-row {
+.matches-card-title-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
-.card-title {
-  font-size: 13px;
-  font-weight: 700;
+.matches-card-title {
   color: var(--text-primary);
-  letter-spacing: 0.5px;
+  font-size: calc(16px * var(--font-scale));
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
-.card-date {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 2px;
+.matches-card-date {
   display: block;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 500;
 }
 
-.badge {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 20px;
+.matches-pill {
   border: 1px solid;
-  white-space: nowrap;
+  border-radius: 10px;
+  padding: 5px 10px;
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
-/* VS Row */
-.vs-row {
+.matches-versus-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 0;
+  justify-content: center;
+  margin-bottom: 20px;
 }
 
-.team-group {
+.matches-team-group {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 8px;
 }
 
-.avatar-with-name {
+.matches-versus-label {
+  padding: 0 16px;
+  font-size: calc(22px * var(--font-scale));
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.matches-avatar-stack {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  min-width: 52px;
+  gap: 5px;
 }
 
-.participant-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+.matches-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
   object-fit: cover;
-  border: 2px solid var(--border-color);
+  border: 1px solid var(--border-color);
 }
 
-.participant-avatar.placeholder {
+.matches-avatar-placeholder,
+.matches-avatar-empty {
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--bg-color);
-  color: var(--text-secondary);
-  font-size: 18px;
-  font-weight: 700;
 }
 
-.participant-avatar.empty-slot {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.matches-avatar-placeholder {
+  color: var(--text-primary);
+  font-size: calc(18px * var(--font-scale));
+  font-weight: 900;
+}
+
+.matches-avatar-empty {
   border-style: dashed;
-  color: var(--text-secondary);
-  background: transparent;
 }
 
-.player-name {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
+.matches-avatar-name {
   max-width: 56px;
   text-align: center;
+  color: var(--text-secondary);
+  font-size: calc(11px * var(--font-scale));
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.vs-wrap {
-  padding: 0 4px;
-}
-
-.vs-text {
-  font-size: 14px;
-  font-weight: 800;
-  opacity: 0.8;
-}
-
-.card-footer {
+.matches-card-footer {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-top: 8px;
-  padding-top: 10px;
+  justify-content: space-between;
+  padding-top: 14px;
   border-top: 1px solid var(--border-color);
 }
 
-.confirmed-text {
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.3px;
+.matches-footer-text {
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 900;
 }
 
-.waiting-text {
-  font-size: 13px;
+.matches-footer-text.muted {
   color: var(--text-secondary);
+  font-weight: 500;
 }
 
-.free-spots {
-  font-size: 13px;
-  font-weight: 700;
-}
-
-/* FAB */
-.fab {
-  position: fixed;
-  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
-  right: 20px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: none;
+.matches-fab {
+  position: absolute;
+  right: 32px;
+  bottom: calc(32px + var(--safe-area-bottom) + 64px);
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-lg);
-  cursor: pointer;
-  z-index: 99;
-  transition: transform 0.15s;
-}
-.fab:active {
-  transform: scale(0.9);
-}
-
-/* Loading & Empty states */
-.loading-state {
-  display: flex;
-  justify-content: center;
-  padding-top: 80px;
-}
-
-.spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid var(--border-color);
-  border-top-color: var(--primary-color);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding-top: 80px;
-  color: var(--text-secondary);
-  text-align: center;
-}
-.empty-state p {
-  font-size: 15px;
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
 }

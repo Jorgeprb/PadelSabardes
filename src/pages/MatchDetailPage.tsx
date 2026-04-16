@@ -1,185 +1,222 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { arrayRemove, arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, updateDoc } from 'firebase/firestore';
+import { ArrowLeft, Pencil, Plus, Trash2, Trophy, UserPlus, X } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../services/firebaseConfig';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { sendCategorizedPushNotification } from '../services/PushService';
-import { ArrowLeft, Trash2, Pencil, Plus, X, Trophy } from 'lucide-react';
 import './MatchDetail.css';
 
 export default function MatchDetailPage() {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { primaryColor } = useTheme();
+  const { primaryColor, colors, openMatchCreation } = useTheme();
+
   const [match, setMatch] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [participantsData, setParticipantsData] = useState<any[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [kickTarget, setKickTarget] = useState<any>(null);
+  const [adminUserModalVisible, setAdminUserModalVisible] = useState(false);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!matchId) return;
-    const unsub = onSnapshot(doc(db, 'matches', matchId), (docSnap) => {
-      if (docSnap.exists()) {
-        const matchData: any = { id: docSnap.id, ...docSnap.data() };
-        setMatch(matchData);
-        fetchParticipants(matchData.listaParticipantes || []);
-      }
+    if (!matchId) return undefined;
+    setLoading(true);
+    const unsubscribe = onSnapshot(doc(db, 'matches', matchId), (snapshot) => {
+      if (!snapshot.exists()) return;
+      const matchData = { id: snapshot.id, ...snapshot.data() } as any;
+      setMatch(matchData);
+      fetchParticipants(matchData.listaParticipantes || []);
     });
-    return () => unsub();
+    return () => unsubscribe();
   }, [matchId]);
 
-  const fetchParticipants = async (uids: string[]) => {
-    if (uids.length === 0) { setParticipantsData([]); setLoading(false); return; }
-    const docs = await Promise.all(uids.map(uid => getDoc(doc(db, 'users', uid))));
-    setParticipantsData(docs.map(d => ({ uid: d.id, ...d.data() })));
+  const fetchParticipants = async (userIds: string[]) => {
+    if (userIds.length === 0) {
+      setParticipantsData([]);
+      setLoading(false);
+      return;
+    }
+
+    const docs = await Promise.all(userIds.map((uid) => getDoc(doc(db, 'users', uid))));
+    setParticipantsData(docs.map((entry) => ({ uid: entry.id, ...entry.data() })));
     setLoading(false);
   };
 
   const handleJoin = async () => {
     if (!match || !user || !matchId) return;
-    if (match.listaParticipantes?.length >= match.plazas) return alert('El partido ya está completo');
+    if (match.listaParticipantes?.length >= match.plazas) {
+      window.alert('Aviso\n\nEl partido ya esta completo');
+      return;
+    }
+
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayUnion(user.uid) });
     const others = (match.listaParticipantes || []).filter((id: string) => id !== user.uid);
-    await sendCategorizedPushNotification(others, 'PÁDEL Sabardes', `${user.nombreApellidos} se ha unido al partido del ${match.fecha}.`, 'joins');
+    await sendCategorizedPushNotification(others, 'PADEL Sabardes', `${user.nombreApellidos} se ha unido al partido del ${match.fecha}.`, 'joins');
   };
 
   const handleLeave = async () => {
     if (!match || !user || !matchId) return;
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayRemove(user.uid) });
     const others = (match.listaParticipantes || []).filter((id: string) => id !== user.uid);
-    await sendCategorizedPushNotification(others, 'PÁDEL Sabardes', `${user.nombreApellidos} se ha dado de baja del partido del ${match.fecha}.`, 'leaves');
+    await sendCategorizedPushNotification(others, 'PADEL Sabardes', `${user.nombreApellidos} se ha dado de baja del partido del ${match.fecha}.`, 'leaves');
   };
 
   const executeKick = async () => {
     if (!match || !kickTarget || !matchId) return;
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayRemove(kickTarget.uid) });
-    await sendCategorizedPushNotification([kickTarget.uid], 'PÁDEL Sabardes', `El administrador te ha expulsado del partido del ${match.fecha}.`, 'leaves');
+    await sendCategorizedPushNotification([kickTarget.uid], 'PADEL Sabardes', `El administrador te ha expulsado del partido del ${match.fecha}.`, 'leaves');
     setKickTarget(null);
   };
 
   const executeDelete = async () => {
     if (!matchId) return;
-    const parts = match?.listaParticipantes || [];
-    const others = parts.filter((id: string) => id !== user?.uid);
+    const others = (match?.listaParticipantes || []).filter((id: string) => id !== user?.uid);
     await deleteDoc(doc(db, 'matches', matchId));
-    await sendCategorizedPushNotification(others, 'Partido Cancelado', `El administrador ha cancelado el partido del ${match.fecha}.`, 'cancellations');
+    await sendCategorizedPushNotification(others, 'Partido Cancelado', `El administrador ha cancelado el partido del ${match?.fecha}.`, 'cancellations');
     setShowDeleteModal(false);
-    navigate('/');
+    navigate(-1);
   };
 
-  if (loading || !match) return <div className="detail-loading"><div className="spinner"></div></div>;
+  const openAdminPicker = async () => {
+    if (allUsers.length === 0) {
+      const snapshot = await getDocs(collection(db, 'users'));
+      setAllUsers(snapshot.docs.map((entry) => ({ uid: entry.id, ...entry.data() })));
+    }
+    setAdminUserModalVisible(true);
+  };
+
+  const addPlayerAsAdmin = async (entry: any) => {
+    if (!matchId || !match) return;
+    setAdminUserModalVisible(false);
+    await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayUnion(entry.uid) });
+    const others = (match.listaParticipantes || []).filter((id: string) => id !== entry.uid);
+    await sendCategorizedPushNotification(others, 'PADEL Sabardes', `El admin ha anadido a ${entry.nombreApellidos} al partido del ${match.fecha}.`, 'joins');
+  };
+
+  if (loading || !match) {
+    return <div className="centered-loader"><div className="spinner" style={{ borderTopColor: primaryColor }}></div></div>;
+  }
 
   const isParticipant = match.listaParticipantes?.includes(user?.uid);
   const isTournament = !!match.isTournament;
-  const accent = isTournament ? '#D4A017' : primaryColor;
+  const accentColor = isTournament ? '#D4A017' : primaryColor;
   const max = match.plazas || 4;
   const half = Math.ceil(max / 2);
 
   const renderSlot = (index: number) => {
-    const p = participantsData[index];
-    if (p) {
-      const isMe = p.uid === user?.uid;
+    const participant = participantsData[index];
+
+    if (participant) {
+      const isMe = participant.uid === user?.uid;
       return (
-        <div className="slot-player" key={index}>
-          <div className="slot-avatar-wrap">
-            {p.fotoURL ? (
-              <img src={p.fotoURL} className="slot-avatar" alt={p.nombreApellidos} />
+        <div className="detail-slot-player" key={`slot-${index}`}>
+          <div className="detail-slot-avatar-wrap">
+            {participant.fotoURL ? (
+              <img src={participant.fotoURL} className="detail-slot-avatar" alt={participant.nombreApellidos} />
             ) : (
-              <div className="slot-avatar placeholder-avatar">
-                {p.nombreApellidos?.charAt(0)?.toUpperCase()}
-              </div>
+              <div className="detail-slot-avatar detail-slot-avatar-placeholder">{participant.nombreApellidos?.charAt(0)?.toUpperCase()}</div>
             )}
             {(isMe || user?.role === 'admin') && (
-              <button className="leave-badge" onClick={(e) => { e.stopPropagation(); isMe ? handleLeave() : setKickTarget(p); }}>
-                <X size={12} color="#fff" />
+              <button className="detail-leave-badge" onClick={() => (isMe ? handleLeave() : setKickTarget(participant))}>
+                <X size={14} color="#fff" />
               </button>
             )}
           </div>
-          <span className="slot-name">{p.nombreApellidos?.split(' ')[0]}</span>
+          <span className="detail-slot-name">{participant.nombreApellidos?.split(' ')[0]}</span>
         </div>
       );
     }
+
     return (
-      <div className="slot-player" key={index}>
+      <div className="detail-slot-player" key={`slot-${index}`}>
         <button
-          className="slot-empty"
-          style={{ borderColor: accent }}
-          onClick={!isParticipant ? handleJoin : undefined}
-          disabled={isParticipant}
+          className="detail-slot-empty"
+          style={{ borderColor: accentColor }}
+          onClick={() => {
+            if (user?.role === 'admin') openAdminPicker();
+            else if (!isParticipant) handleJoin();
+          }}
+          disabled={isParticipant && user?.role !== 'admin'}
         >
-          <Plus size={24} color={accent} />
+          {user?.role === 'admin' ? <UserPlus size={26} color={accentColor} /> : <Plus size={26} color={accentColor} />}
         </button>
-        {!isParticipant && <span className="slot-empty-text" style={{ color: accent }}>Unirse</span>}
+        {(!isParticipant || user?.role === 'admin') && <span className="detail-slot-empty-text" style={{ color: accentColor }}>Pulsar</span>}
       </div>
     );
   };
 
   return (
     <div className="detail-page">
-      <div className="detail-hero" style={{ backgroundColor: accent }}>
-        <div className="hero-line-1"></div>
-        <div className="hero-line-2"></div>
-        <div className="hero-nav">
-          <button className="hero-back" onClick={() => navigate(-1)}>
-            <ArrowLeft size={22} color="#fff" />
+      <div className="detail-hero" style={{ backgroundColor: accentColor }}>
+        <div className="detail-court-line detail-court-line-1"></div>
+        <div className="detail-court-line detail-court-line-2"></div>
+        <div className="detail-top-nav">
+          <button className="detail-round-button translucent" onClick={() => navigate(-1)}>
+            <ArrowLeft size={24} color="#fff" />
           </button>
-          {user?.role === 'admin' && (
-            <div className="hero-actions">
-              <button className="hero-edit" onClick={() => navigate(`/create-match?edit=${matchId}`)}>
-                <Pencil size={18} color={accent} />
+          {(user?.role === 'admin' || openMatchCreation) && (
+            <div className="detail-top-actions">
+              <button className="detail-round-button solid" onClick={() => navigate(`/create-match?matchId=${matchId}`)}>
+                <Pencil size={20} color={accentColor} />
               </button>
-              <button className="hero-delete" onClick={() => setShowDeleteModal(true)}>
-                <Trash2 size={18} color="#fff" />
+              <button className="detail-round-button danger" onClick={() => setShowDeleteModal(true)}>
+                <Trash2 size={20} color="#fff" />
               </button>
             </div>
           )}
         </div>
       </div>
 
-      <div className="detail-scroll">
-        <div className="detail-card">
-          <div className="detail-card-header">
-            {isTournament ? <Trophy size={24} color="#D4A017" /> : <span className="detail-icon">🎾</span>}
+      <div className="detail-scroll scroll-area">
+        <div className="detail-main-card card">
+          <div className="detail-main-card-header">
+            {isTournament ? <Trophy size={28} color="#D4A017" /> : <span className="detail-ball-icon">PADEL</span>}
             <div>
-              <h2>{isTournament ? 'TORNEO' : 'PÁDEL'}</h2>
-              <span className="detail-sub">{match.fecha} • {match.hora}</span>
+              <div className="detail-main-title">{isTournament ? 'TORNEO' : 'PADEL'}</div>
+              <div className="detail-main-subtitle">{match.fecha} • {match.hora}</div>
             </div>
           </div>
           <div className="detail-info-grid">
-            <div><span className="info-label">Ubicación</span><span className="info-val">{match.ubicacion}</span></div>
-            <div><span className="info-label">Plazas</span><span className="info-val">{match.listaParticipantes?.length || 0}/{max}</span></div>
+            <div>
+              <span className="detail-info-label">Ubicacion</span>
+              <span className="detail-info-value">{match.ubicacion}</span>
+            </div>
+            <div>
+              <span className="detail-info-label">Plazas</span>
+              <span className="detail-info-value">{match.listaParticipantes?.length || 0}/{match.plazas}</span>
+            </div>
           </div>
         </div>
 
-        <div className="players-section">
-          <h3>Jugadores</h3>
-          <div className="team-container">
-            <span className="team-letter">A</span>
-            <div className="team-slots">
-              {Array.from({ length: half }).map((_, i) => renderSlot(i))}
-            </div>
+        <div className="detail-players-card card">
+          <div className="detail-section-title">Jugadores</div>
+          <div className="detail-team-container">
+            {Array.from({ length: half }).map((_, index) => renderSlot(index))}
+            <div className="detail-team-letter">A</div>
           </div>
-          <div className="vs-divider"><div className="vs-line"></div><span>VS</span><div className="vs-line"></div></div>
-          <div className="team-container">
-            <span className="team-letter">B</span>
-            <div className="team-slots">
-              {Array.from({ length: max - half }).map((_, i) => renderSlot(half + i))}
-            </div>
+          <div className="detail-vs-divider">
+            <div className="detail-vs-line"></div>
+            <span>VS</span>
+            <div className="detail-vs-line"></div>
+          </div>
+          <div className="detail-team-container">
+            {Array.from({ length: max - half }).map((_, index) => renderSlot(half + index))}
+            <div className="detail-team-letter">B</div>
           </div>
         </div>
       </div>
 
-      {/* Delete Modal */}
       {showDeleteModal && (
-        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
-          <div className="modal-body" onClick={e => e.stopPropagation()}>
-            <Trash2 size={40} color="var(--danger-color)" />
-            <h3>¿Borrar Partido?</h3>
-            <p>Esta acción no se puede deshacer.</p>
-            <div className="modal-actions">
+        <div className="modal-overlay modal-center">
+          <div className="modal-card detail-confirm-card">
+            <Trash2 size={48} color={colors.danger} />
+            <h3>Borrar Partido?</h3>
+            <p>Esta accion no se puede deshacer y las plazas volaran.</p>
+            <div className="detail-modal-actions">
               <button className="btn btn-outline" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
               <button className="btn btn-danger" onClick={executeDelete}>Borrar</button>
             </div>
@@ -187,15 +224,38 @@ export default function MatchDetailPage() {
         </div>
       )}
 
-      {/* Kick Modal */}
       {kickTarget && (
-        <div className="modal-overlay" onClick={() => setKickTarget(null)}>
-          <div className="modal-body" onClick={e => e.stopPropagation()}>
-            <h3>¿Expulsar a {kickTarget.nombreApellidos}?</h3>
-            <p>Tendrá que volver a unirse manualmente.</p>
-            <div className="modal-actions">
+        <div className="modal-overlay modal-center">
+          <div className="modal-card detail-confirm-card">
+            <h3>Expulsar a {kickTarget.nombreApellidos}?</h3>
+            <p>Tendra que volver a unirse manualmente si asi lo deseas o si la plaza queda abierta.</p>
+            <div className="detail-modal-actions">
               <button className="btn btn-outline" onClick={() => setKickTarget(null)}>Cancelar</button>
               <button className="btn btn-primary" onClick={executeKick}>Expulsar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {adminUserModalVisible && (
+        <div className="modal-overlay">
+          <div className="modal-sheet detail-admin-picker">
+            <div className="detail-admin-picker-header">
+              <h3>Anadir Jugador</h3>
+              <button onClick={() => setAdminUserModalVisible(false)}><X size={28} color={colors.textDim} /></button>
+            </div>
+            <div className="scroll-area detail-admin-picker-list">
+              {allUsers.filter((entry) => !(match.listaParticipantes || []).includes(entry.uid)).map((entry) => (
+                <button key={entry.uid} className="detail-admin-user-row" onClick={() => addPlayerAsAdmin(entry)}>
+                  {entry.fotoURL ? (
+                    <img src={entry.fotoURL} className="detail-admin-user-avatar" alt={entry.nombreApellidos} />
+                  ) : (
+                    <div className="detail-admin-user-avatar detail-admin-user-avatar-placeholder">{entry.nombreApellidos?.charAt(0)}</div>
+                  )}
+                  <span>{entry.nombreApellidos}</span>
+                </button>
+              ))}
+              {allUsers.length === 0 && <div className="centered-loader"><div className="spinner" style={{ borderTopColor: primaryColor }}></div></div>}
             </div>
           </div>
         </div>

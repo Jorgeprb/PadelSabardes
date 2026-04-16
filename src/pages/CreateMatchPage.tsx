@@ -1,128 +1,188 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { addDoc, collection, doc, getDoc, getDocs, updateDoc } from 'firebase/firestore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { collection, addDoc, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { CheckCircle2, Globe, User, Users, UserPlus, X } from 'lucide-react';
 import { db } from '../services/firebaseConfig';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from '../context/LanguageContext';
 import { sendCategorizedPushNotification } from '../services/PushService';
-import { ArrowLeft, X, UserPlus } from 'lucide-react';
 import './CreateMatch.css';
+
+const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+const formatDDMM = (date: Date) => {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${day}/${month}`;
+};
+
+const formatHHMM = (date: Date) => {
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
+const toDateInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const buildDateFromDDMM = (dateString?: string | null) => {
+  const base = new Date();
+  if (!dateString) return base;
+  const [day, month] = dateString.split('/').map(Number);
+  if (!day || !month) return base;
+  const parsedDate = new Date();
+  parsedDate.setDate(day);
+  parsedDate.setMonth(month - 1);
+  return parsedDate;
+};
+
+const getMinutes = (value: string) => {
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours * 60 + minutes;
+};
 
 export default function CreateMatchPage() {
   const [searchParams] = useSearchParams();
-  const editId = searchParams.get('edit');
+  const matchId = searchParams.get('matchId') || searchParams.get('edit');
+  const initialDateStr = searchParams.get('initialDateStr');
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { primaryColor } = useTheme();
+  const { primaryColor, colors } = useTheme();
+  const { t } = useTranslation();
 
-  const [fecha, setFecha] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  });
-  const [hora, setHora] = useState('17:00');
-  const [users, setUsers] = useState<any[]>([]);
-
-  const [inviteAll, setInviteAll] = useState(true);
-  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
-  const [preParticipantes, setPreParticipantes] = useState<any[]>([null, null, null, null]);
-  const [showUserPicker, setShowUserPicker] = useState(false);
-  const [activeSlot, setActiveSlot] = useState<number | null>(null);
+  const [dateValue, setDateValue] = useState(() => toDateInputValue(buildDateFromDDMM(initialDateStr)));
+  const [timeValue, setTimeValue] = useState('17:00');
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
+  const [users, setUsers] = useState<any[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
+  const [inviteAll, setInviteAll] = useState(true);
+  const [preParticipants, setPreParticipants] = useState<any[]>([null, null, null, null]);
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [activeSlot, setActiveSlot] = useState<number | null>(null);
+
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
-    const init = async () => {
-      const uSnap = await getDocs(collection(db, 'users'));
-      const fetchedUsers = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setUsers(fetchedUsers);
+    const initData = async () => {
+      try {
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        const fetchedUsers = usersSnapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+        setUsers(fetchedUsers);
 
-      if (editId) {
-        const mSnap = await getDoc(doc(db, 'matches', editId));
-        if (mSnap.exists()) {
-          const m = mSnap.data();
-          const [d, mo] = m.fecha.split('/');
-          const now = new Date();
-          setFecha(`${now.getFullYear()}-${mo}-${d}`);
-          setHora(m.hora);
-          if (m.listaInvitados?.length === fetchedUsers.length) setInviteAll(true);
-          else { setInviteAll(false); setSelectedUserIds(new Set(m.listaInvitados)); }
-          const newPre: any[] = [null, null, null, null];
-          (m.listaParticipantes || []).forEach((uid: string, i: number) => {
-            if (i < 4) newPre[i] = fetchedUsers.find(u => u.id === uid) || null;
-          });
-          setPreParticipantes(newPre);
+        if (isAdmin) {
+          const groupsSnapshot = await getDocs(collection(db, 'groups'));
+          setGroups(groupsSnapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() })));
         }
+
+        if (matchId) {
+          const matchSnapshot = await getDoc(doc(db, 'matches', matchId));
+          if (matchSnapshot.exists()) {
+            const matchData = matchSnapshot.data();
+            const [day, month] = (matchData.fecha || '01/01').split('/');
+            const parsedDate = new Date();
+            parsedDate.setDate(Number(day));
+            parsedDate.setMonth(Number(month) - 1);
+            setDateValue(toDateInputValue(parsedDate));
+            setTimeValue(matchData.hora || '17:00');
+
+            if ((matchData.listaInvitados || []).length === fetchedUsers.length) {
+              setInviteAll(true);
+            } else {
+              setInviteAll(false);
+              setSelectedUserIds(new Set(matchData.listaInvitados || []));
+            }
+
+            const newParticipants = [null, null, null, null];
+            (matchData.listaParticipantes || []).forEach((uid: string, index: number) => {
+              if (index < 4) {
+                newParticipants[index] = fetchedUsers.find((entry) => entry.id === uid) || null;
+              }
+            });
+            setPreParticipants(newParticipants);
+          }
+        }
+      } finally {
+        setLoadingData(false);
       }
     };
-    init();
-  }, [editId]);
 
-  const formatDDMM = (dateStr: string) => {
-    const [, mo, d] = dateStr.split('-');
-    return `${d}/${mo}`;
-  };
+    initData();
+  }, [isAdmin, matchId]);
 
-  const getMinutes = (hStr: string) => {
-    const [h, m] = hStr.split(':');
-    return parseInt(h) * 60 + parseInt(m);
-  };
+  const dateObject = useMemo(() => new Date(`${dateValue}T${timeValue}`), [dateValue, timeValue]);
 
-  const handleSave = async () => {
-    const finalFecha = formatDDMM(fecha);
-    const finalHora = hora;
+  const saveMatch = async () => {
+    const finalFecha = formatDDMM(dateObject);
+    const finalHora = timeValue;
+    const finalInvitados = new Set<string>();
 
-    let finalInvitados = new Set<string>();
-    if (inviteAll) users.forEach(u => finalInvitados.add(u.id));
-    else selectedUserIds.forEach(id => finalInvitados.add(id));
+    if (inviteAll) {
+      users.forEach((entry) => finalInvitados.add(entry.id));
+    } else {
+      selectedUserIds.forEach((uid) => finalInvitados.add(uid));
+      selectedGroupIds.forEach((groupId) => {
+        const group = groups.find((entry) => entry.id === groupId);
+        group?.userIds?.forEach((uid: string) => finalInvitados.add(uid));
+      });
+    }
 
-    const fisicosParticipantes = preParticipantes.filter(p => p !== null).map(p => p.id);
+    const physicalParticipants = preParticipants.filter(Boolean).map((entry) => entry.id);
 
+    setLoading(true);
     try {
-      setLoading(true);
-
-      // Check collisions with existing matches
-      const qMatches = await getDocs(collection(db, 'matches'));
+      const matchesSnapshot = await getDocs(collection(db, 'matches'));
       let hasCollision = false;
       const newStartMin = getMinutes(finalHora);
       const newEndMin = newStartMin + 90;
 
-      qMatches.docs.forEach(docSnap => {
-        const m = { id: docSnap.id, ...docSnap.data() } as any;
-        if (m.fecha === finalFecha) {
-          if (editId && m.id === editId) return;
-          const eStartMin = getMinutes(m.hora);
-          const eEndMin = eStartMin + 90;
-          if (newStartMin < eEndMin && newEndMin > eStartMin) hasCollision = true;
+      matchesSnapshot.docs.forEach((entry) => {
+        const data = { id: entry.id, ...entry.data() } as any;
+        if (data.fecha !== finalFecha) return;
+        if (matchId && data.id === matchId) return;
+
+        const existingStart = getMinutes(data.hora || '00:00');
+        const existingEnd = existingStart + 90;
+        if (newStartMin < existingEnd && newEndMin > existingStart) {
+          hasCollision = true;
         }
       });
 
-      // Check tournament collisions
       if (!hasCollision) {
-        const tDoc = await getDoc(doc(db, 'tournament', 'currentTournament'));
-        if (tDoc.exists()) {
-          const tData = tDoc.data();
-          const checkTMatch = (m: any) => {
-            if ((m.status === 'scheduled' || m.status === 'confirmed') && m.date) {
-              const [mStr, tStr] = m.date.split(' ');
-              const mBase = mStr.substring(0, 5);
-              if (mBase === finalFecha) {
-                const eStartMin = getMinutes(tStr);
-                const eEndMin = eStartMin + 90;
-                if (newStartMin < eEndMin && newEndMin > eStartMin) hasCollision = true;
+        const tournamentSnapshot = await getDoc(doc(db, 'tournament', 'currentTournament'));
+        if (tournamentSnapshot.exists()) {
+          const tournamentData = tournamentSnapshot.data();
+          const checkTournamentMatch = (match: any) => {
+            if ((match.status === 'scheduled' || match.status === 'confirmed') && match.date) {
+              const [matchDate, matchTime] = match.date.split(' ');
+              if (matchDate.substring(0, 5) !== finalFecha) return;
+              const existingStart = getMinutes(matchTime);
+              const existingEnd = existingStart + 90;
+              if (newStartMin < existingEnd && newEndMin > existingStart) {
+                hasCollision = true;
               }
             }
           };
-          (tData.schedule || []).forEach(checkTMatch);
-          if (tData.bracket) {
-            (tData.bracket.quarterfinals || []).forEach(checkTMatch);
-            (tData.bracket.semifinals || []).forEach(checkTMatch);
-            if (tData.bracket.final) checkTMatch(tData.bracket.final);
+
+          (tournamentData.schedule || []).forEach(checkTournamentMatch);
+          if (tournamentData.bracket) {
+            (tournamentData.bracket.quarterfinals || []).forEach(checkTournamentMatch);
+            (tournamentData.bracket.semifinals || []).forEach(checkTournamentMatch);
+            if (tournamentData.bracket.final) checkTournamentMatch(tournamentData.bracket.final);
           }
         }
       }
 
       if (hasCollision) {
-        setLoading(false);
-        return alert('Pista Ocupada ⏱️ — La pista dispone de bloques de 1h 30min y ya existe una reserva que se solapa.');
+        window.alert(`${t('court_busy')}\n\n${t('court_busy_msg')}`);
+        return;
       }
 
       const payload = {
@@ -133,131 +193,242 @@ export default function CreateMatchPage() {
         plazas: 4,
         creadorId: user?.uid,
         creadorNombre: user?.nombreApellidos,
-        listaParticipantes: fisicosParticipantes,
+        listaParticipantes: physicalParticipants,
         listaInvitados: Array.from(finalInvitados),
         estado: 'abierto',
       };
 
-      if (editId) {
-        await updateDoc(doc(db, 'matches', editId), payload);
+      if (matchId) {
+        await updateDoc(doc(db, 'matches', matchId), payload);
       } else {
         await addDoc(collection(db, 'matches'), { ...payload, fechaCreacion: new Date().toISOString() });
       }
 
-      const usersToNotify = new Set([...Array.from(finalInvitados), ...fisicosParticipantes]);
-      usersToNotify.delete(user?.uid || '');
+      const usersToNotify = new Set([...Array.from(finalInvitados), ...physicalParticipants]);
+      if (user?.uid) usersToNotify.delete(user.uid);
 
-      if (editId) {
-        await sendCategorizedPushNotification(Array.from(usersToNotify), 'Cambios en tu partido', `El partido del ${finalFecha} a las ${finalHora} ha sido editado.`, 'changes');
+      if (matchId) {
+        await sendCategorizedPushNotification(
+          Array.from(usersToNotify),
+          'Cambios en tu partido',
+          `El partido del ${finalFecha} a las ${finalHora} ha sido editado por el administrador.`,
+          'changes',
+        );
       } else {
-        await sendCategorizedPushNotification(Array.from(usersToNotify), '🎾 ¡Nuevo Partido!', `Has sido invitado a jugar el ${finalFecha} a las ${finalHora}.`, 'invitations');
+        await sendCategorizedPushNotification(
+          Array.from(usersToNotify),
+          '🎾 ¡Nuevo Partido Disponible!',
+          `Has sido invitado a jugar el ${finalFecha} a las ${finalHora}.`,
+          'invitations',
+        );
       }
 
+      window.alert(`${t('success')}\n\n${matchId ? t('match_updated') : t('match_created')}`);
       navigate(-1);
-    } catch (e: any) { alert('Error: ' + e.message); setLoading(false); }
-  };
-
-  const openSlotPicker = (i: number) => {
-    if (preParticipantes[i]) {
-      const newPre = [...preParticipantes];
-      newPre[i] = null;
-      setPreParticipantes(newPre);
-    } else {
-      setActiveSlot(i);
-      setShowUserPicker(true);
+    } catch (error: any) {
+      window.alert(`${t('error')}\n\n${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const selectUser = (u: any) => {
+  const openUserModal = (slotIndex: number) => {
+    if (preParticipants[slotIndex]) {
+      const next = [...preParticipants];
+      next[slotIndex] = null;
+      setPreParticipants(next);
+      return;
+    }
+
+    setActiveSlot(slotIndex);
+    setUserModalOpen(true);
+  };
+
+  const selectUserForSlot = (selectedUser: any) => {
     if (activeSlot === null) return;
-    const newPre = [...preParticipantes];
-    newPre[activeSlot] = u;
-    setPreParticipantes(newPre);
-    setShowUserPicker(false);
+    const next = [...preParticipants];
+    next[activeSlot] = selectedUser;
+    setPreParticipants(next);
+    setUserModalOpen(false);
+  };
+
+  const toggleSelection = (id: string, isGroup: boolean) => {
+    if (inviteAll) setInviteAll(false);
+    if (isGroup) {
+      setSelectedGroupIds((previous) => {
+        const next = new Set(previous);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+      return;
+    }
+
+    setSelectedUserIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setInviteAll((previous) => {
+      const next = !previous;
+      if (next) {
+        setSelectedUserIds(new Set());
+        setSelectedGroupIds(new Set());
+      }
+      return next;
+    });
+  };
+
+  const renderSlot = (participant: any, absoluteIndex: number) => {
+    if (participant) {
+      return (
+        <div className="create-match-slot-player" key={`slot-${absoluteIndex}`}>
+          <button className="create-match-slot-avatar-wrap" onClick={() => openUserModal(absoluteIndex)}>
+            {participant.fotoURL ? (
+              <img src={participant.fotoURL} className="create-match-slot-avatar" alt={participant.nombreApellidos} />
+            ) : (
+              <div className="create-match-slot-avatar create-match-slot-avatar-placeholder">
+                {participant.nombreApellidos?.charAt(0)?.toUpperCase()}
+              </div>
+            )}
+          </button>
+          <span className="create-match-slot-name">{participant.nombreApellidos?.split(' ')[0]}</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="create-match-slot-player" key={`slot-${absoluteIndex}`}>
+        <button className="create-match-slot-empty" style={{ borderColor: primaryColor }} onClick={() => openUserModal(absoluteIndex)}>
+          <UserPlus size={28} color={primaryColor} />
+        </button>
+        <span className="create-match-slot-empty-text" style={{ color: primaryColor }}></span>
+      </div>
+    );
+  };
+
+  const renderSelectionItem = (entry: any, isGroup: boolean) => {
+    const isSelected = isGroup ? selectedGroupIds.has(entry.id) : selectedUserIds.has(entry.id);
+    return (
+      <button
+        key={entry.id}
+        className={`create-match-selection-card ${isSelected && !inviteAll ? 'is-selected' : ''}`}
+        onClick={() => toggleSelection(entry.id, isGroup)}
+        type="button"
+      >
+        <div className="create-match-selection-info">
+          <div className="create-match-selection-icon" style={{ backgroundColor: colors.background }}>
+            {isGroup ? <Users size={20} color={colors.textDim} /> : <User size={20} color={colors.textDim} />}
+          </div>
+          <span className="create-match-selection-name">{isGroup ? entry.name : entry.nombreApellidos}</span>
+        </div>
+        <CheckCircle2 size={28} color={isSelected && !inviteAll ? primaryColor : colors.border} style={!isSelected || inviteAll ? { opacity: 0.4 } : undefined} />
+      </button>
+    );
   };
 
   return (
-    <div className="create-page">
-      <div className="create-header" style={{ backgroundColor: primaryColor }}>
-        <button className="hero-back" onClick={() => navigate(-1)}>
-          <ArrowLeft size={22} color="#fff" />
+    <div className="create-match-page">
+      <div className="create-match-header">
+        <button className="create-match-round-button" onClick={() => navigate(-1)}>
+          <X size={28} color={colors.text} />
         </button>
-        <h1>{editId ? 'Editar Partido' : 'Nuevo Partido'}</h1>
+        <div className="create-match-header-spacer"></div>
+        <button className="create-match-save-button" style={{ backgroundColor: primaryColor }} onClick={saveMatch} disabled={loading || loadingData}>
+          {loading ? 'Guardando...' : matchId ? t('save_changes') : t('create_match')}
+        </button>
       </div>
 
-      <div className="scroll-area" style={{ padding: 16, paddingBottom: 100 }}>
-        <div className="form-group">
-          <label>Fecha</label>
-          <input className="input-field" type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label>Hora</label>
-          <input className="input-field" type="time" value={hora} onChange={e => setHora(e.target.value)} />
+      <div className="scroll-area" style={{ padding: 16, paddingBottom: 56 }}>
+        <div className="create-match-row">
+          <div className="create-match-half-input">
+            <label className="create-match-label">{t('date')}</label>
+            <div className="create-match-picker-box">
+              <input className="create-match-native-input" type="date" value={dateValue} onChange={(event) => setDateValue(event.target.value)} />
+            </div>
+          </div>
+          <div className="create-match-half-input">
+            <label className="create-match-label">{t('time')}</label>
+            <div className="create-match-picker-box">
+              <input className="create-match-native-input" type="time" value={timeValue} onChange={(event) => setTimeValue(event.target.value)} />
+            </div>
+          </div>
         </div>
 
-        <div className="form-group">
-          <label>Jugadores</label>
-          <div className="players-grid">
-            {preParticipantes.map((p, i) => (
-              <div key={i} className="player-slot" onClick={() => openSlotPicker(i)}>
-                {p ? (
-                  <>
-                    {p.fotoURL ? <img src={p.fotoURL} className="slot-img" alt="" /> : <div className="slot-placeholder">{p.nombreApellidos?.charAt(0)}</div>}
-                    <span>{p.nombreApellidos?.split(' ')[0]}</span>
-                    <button className="remove-btn"><X size={12} /></button>
-                  </>
-                ) : (
-                  <>
-                    <div className="slot-add"><UserPlus size={20} color={primaryColor} /></div>
-                    <span style={{ color: 'var(--text-secondary)' }}>Vacante</span>
-                  </>
-                )}
+        <div className="create-match-section-card">
+          <div className="create-match-section-title">{t('players')}</div>
+          <div className="create-match-team-row">
+            <div className="create-match-team-letter">A</div>
+            {preParticipants.slice(0, 2).map((participant, index) => renderSlot(participant, index))}
+            <div className="create-match-vertical-divider"></div>
+            {preParticipants.slice(2, 4).map((participant, index) => renderSlot(participant, index + 2))}
+            <div className="create-match-team-letter create-match-team-letter-right">B</div>
+          </div>
+        </div>
+
+        <div className="create-match-section-card">
+          <div className="create-match-section-title">{t('invitations')}</div>
+
+          <button
+            className={`create-match-selection-card ${inviteAll ? 'is-selected' : ''}`}
+            onClick={toggleAll}
+            type="button"
+          >
+            <div className="create-match-selection-info">
+              <div className="create-match-selection-icon" style={{ backgroundColor: colors.background }}>
+                <Globe size={20} color={colors.textDim} />
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label>Invitaciones</label>
-          <div className="settings-row" onClick={() => setInviteAll(!inviteAll)}>
-            <span>Invitar a todos</span>
-            <label className="toggle"><input type="checkbox" checked={inviteAll} readOnly /><span className="toggle-slider"></span></label>
-          </div>
-          {!inviteAll && (
-            <div className="user-checkboxes">
-              {users.map(u => (
-                <label key={u.id} className="user-check">
-                  <input type="checkbox" checked={selectedUserIds.has(u.id)}
-                    onChange={() => {
-                      const s = new Set(selectedUserIds);
-                      s.has(u.id) ? s.delete(u.id) : s.add(u.id);
-                      setSelectedUserIds(s);
-                    }} />
-                  <span>{u.nombreApellidos}</span>
-                </label>
-              ))}
+              <span className="create-match-selection-name">{t('everyone_global')}</span>
             </div>
+            <CheckCircle2 size={28} color={inviteAll ? primaryColor : colors.border} style={!inviteAll ? { opacity: 0.4 } : undefined} />
+          </button>
+
+          {isAdmin && (
+            <>
+              <div className="create-match-sub-label">{t('fast_groups')}</div>
+              {groups.length === 0 ? (
+                <p className="create-match-empty-text">{t('no_groups')}</p>
+              ) : (
+                groups.map((entry) => renderSelectionItem(entry, true))
+              )}
+            </>
           )}
+
+          <div className="create-match-sub-label">{t('individuals')}</div>
+          {users.map((entry) => renderSelectionItem(entry, false))}
         </div>
 
-        <button className="btn btn-primary full" onClick={handleSave} disabled={loading}>
-          {loading ? 'Guardando...' : editId ? 'Guardar Cambios' : 'Crear Partido'}
-        </button>
+        <div className="create-match-preview-note">
+          {dayNames[dateObject.getDay()]} {formatDDMM(dateObject)} · {formatHHMM(dateObject)}
+        </div>
       </div>
 
-      {/* User Picker Modal */}
-      {showUserPicker && (
-        <div className="modal-overlay" onClick={() => setShowUserPicker(false)}>
-          <div className="modal-body user-list-modal" onClick={e => e.stopPropagation()}>
-            <h3>Seleccionar Jugador</h3>
-            <div className="user-list">
-              {users.filter(u => !preParticipantes.find(p => p?.id === u.id)).map(u => (
-                <div key={u.id} className="user-item" onClick={() => selectUser(u)}>
-                  {u.fotoURL ? <img src={u.fotoURL} className="user-avatar" alt="" /> : <div className="user-avatar placeholder-avatar">{u.nombreApellidos?.charAt(0)}</div>}
-                  <span>{u.nombreApellidos}</span>
-                </div>
-              ))}
+      {userModalOpen && (
+        <div className="modal-overlay" onClick={() => setUserModalOpen(false)}>
+          <div className="modal-sheet" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-handle"></div>
+            <h3 className="create-match-modal-title">{t('assign_player')}</h3>
+            <div className="create-match-user-list">
+              {users
+                .filter((entry) => !preParticipants.some((participant) => participant?.id === entry.id))
+                .map((entry) => (
+                  <button key={entry.id} className="create-match-user-row" onClick={() => selectUserForSlot(entry)}>
+                    {entry.fotoURL ? (
+                      <img src={entry.fotoURL} className="create-match-user-avatar" alt={entry.nombreApellidos} />
+                    ) : (
+                      <div className="create-match-user-avatar create-match-user-avatar-placeholder">
+                        {entry.nombreApellidos?.charAt(0) || '?'}
+                      </div>
+                    )}
+                    <span>{entry.nombreApellidos}</span>
+                  </button>
+                ))}
             </div>
+            <button className="btn btn-danger full" onClick={() => setUserModalOpen(false)}>{t('cancel')}</button>
           </div>
         </div>
       )}

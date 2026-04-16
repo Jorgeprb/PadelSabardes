@@ -1,64 +1,61 @@
 import { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
 import { auth } from '../services/firebaseConfig';
-import { useNavigate, Link } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 import './Auth.css';
 
 export default function LoginPage() {
+  const navigate = useNavigate();
+  const { primaryColor } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) return setError('Rellena todos los campos');
-    setLoading(true);
-    setError('');
+  const handleLogin = async () => {
+    if (!email || !password) {
+      window.alert('Error\n\nCompleta los campos');
+      return;
+    }
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      setLoading(true);
+      await signInWithEmailAndPassword(auth, email.trim(), password);
       navigate('/');
-    } catch (err: any) {
-      setError('Credenciales incorrectas. Inténtalo de nuevo.');
-    } finally {
+    } catch (error: any) {
+      window.alert(`Error al iniciar sesion\n\n${error.message}`);
       setLoading(false);
     }
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-logo">🎾</div>
+    <div className="auth-screen">
+      <div className="auth-panel card">
         <h1 className="auth-title">Padel Sabardes</h1>
-        <p className="auth-subtitle">Inicia sesión para continuar</p>
+        <p className="auth-subtitle">Inicia sesion para entrar a la pista</p>
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <input
-            className="input-field"
-            type="email"
-            placeholder="Correo electrónico"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            autoComplete="email"
-          />
-          <input
-            className="input-field"
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            autoComplete="current-password"
-          />
-          {error && <p className="auth-error">{error}</p>}
-          <button className="btn btn-primary auth-btn" type="submit" disabled={loading}>
-            {loading ? 'Entrando...' : 'Iniciar Sesión'}
-          </button>
-        </form>
+        <input
+          className="input-field auth-input"
+          placeholder="Correo electronico"
+          autoCapitalize="none"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+        <input
+          className="input-field auth-input"
+          placeholder="Contrasena"
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
 
-        <p className="auth-link">
-          ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
-        </p>
+        <button className="btn btn-primary auth-submit" style={{ backgroundColor: primaryColor }} onClick={handleLogin} disabled={loading}>
+          {loading ? <div className="spinner small auth-spinner"></div> : 'Entrar'}
+        </button>
+
+        <button className="auth-link-button" onClick={() => navigate('/register')}>
+          No tienes cuenta? <span style={{ color: primaryColor }}>Registrate</span>
+        </button>
       </div>
     </div>
   );

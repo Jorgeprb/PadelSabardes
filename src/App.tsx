@@ -1,49 +1,94 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, type ReactNode } from 'react';
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
+import { CalendarDays, FileStack, Settings, Trophy, Users } from 'lucide-react';
+import './App.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider, useTranslation } from './context/LanguageContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
-import { setupMessageHandler } from './services/firebaseConfig';
-import { useEffect } from 'react';
+import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
 import MatchDetailPage from './pages/MatchDetailPage';
-import TournamentPage from './pages/TournamentPage';
 import SettingsPage from './pages/SettingsPage';
+import TournamentPage from './pages/TournamentPage';
 import CreateMatchPage from './pages/CreateMatchPage';
-import { CalendarDays, Trophy, Settings } from 'lucide-react';
-import './App.css';
+import UsersListPage from './pages/UsersListPage';
+import GroupsPage from './pages/GroupsPage';
+import CreateEditGroupPage from './pages/CreateEditGroupPage';
+import GroupDetailPage from './pages/GroupDetailPage';
+import { setupMessageHandler } from './services/firebaseConfig';
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
+function FullScreenLoader() {
+  const { primaryColor } = useTheme();
+  return (
+    <div className="app-loading-screen">
+      <div className="spinner" style={{ borderTopColor: primaryColor }}></div>
+    </div>
+  );
+}
+
+function PrivateRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="app-loading"><div className="spinner"></div></div>;
-  return user ? <>{children}</> : <Navigate to="/login" />;
+  if (loading) return <FullScreenLoader />;
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+function AdminRoute({ children }: { children: ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <FullScreenLoader />;
+  return user?.role === 'admin' ? <>{children}</> : <Navigate to="/" replace />;
 }
 
 function BottomTabBar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { primaryColor } = useTheme();
+  const { primaryColor, colors } = useTheme();
+  const { user } = useAuth();
+  const { t } = useTranslation();
 
-  // Don't show on detail/create pages
-  const hiddenPaths = ['/match/', '/create-match', '/login', '/register'];
-  if (hiddenPaths.some(p => location.pathname.startsWith(p))) return null;
+  const hiddenMatchers = [
+    (path: string) => path.startsWith('/login'),
+    (path: string) => path.startsWith('/register'),
+    (path: string) => path.startsWith('/match/'),
+    (path: string) => path.startsWith('/create-match'),
+    (path: string) => path.startsWith('/groups/new'),
+    (path: string) => path.startsWith('/groups/') && path !== '/groups',
+  ];
+
+  if (hiddenMatchers.some((matcher) => matcher(location.pathname))) return null;
 
   const tabs = [
-    { path: '/', icon: CalendarDays, label: 'Partidos' },
-    { path: '/tournament', icon: Trophy, label: 'Torneo' },
-    { path: '/settings', icon: Settings, label: 'Ajustes' },
+    { path: '/', icon: CalendarDays, label: t('nav_matches') },
+    { path: '/tournament', icon: Trophy, label: t('nav_tournament') },
+    ...(user?.role === 'admin'
+      ? [
+          { path: '/users', icon: Users, label: t('nav_users') },
+          { path: '/groups', icon: FileStack, label: t('nav_groups') },
+        ]
+      : []),
+    { path: '/settings', icon: Settings, label: t('nav_settings') },
   ];
 
   return (
     <div className="bottom-tab-bar">
-      {tabs.map(tab => {
+      {tabs.map((tab) => {
         const active = location.pathname === tab.path;
+        const Icon = tab.icon;
         return (
-          <button key={tab.path} className={`tab-item ${active ? 'active' : ''}`}
-            style={active ? { color: primaryColor } : undefined}
+          <button
+            key={tab.path}
+            className={`tab-item ${active ? 'active' : ''}`}
+            style={active ? { color: primaryColor } : { color: colors.textDim }}
             onClick={() => navigate(tab.path)}
           >
-            <tab.icon size={22} />
+            <Icon size={22} strokeWidth={2.2} />
             <span className="tab-label">{tab.label}</span>
           </button>
         );
@@ -54,36 +99,41 @@ function BottomTabBar() {
 
 function AppShell() {
   const { user } = useAuth();
+  const { colors } = useTheme();
 
   useEffect(() => {
-    if (!user) return;
-    // Listen for foreground push messages
-    const unsub = setupMessageHandler((payload: any) => {
-      if (Notification.permission === 'granted') {
-        new Notification(payload.notification?.title || 'Sabardes', {
-          body: payload.notification?.body || '',
-          icon: '/padel-logo-192.png',
-        });
-      }
+    if (!user) return undefined;
+    const unsubscribe = setupMessageHandler((payload: any) => {
+      if (typeof window === 'undefined' || !('Notification' in window)) return;
+      if (Notification.permission !== 'granted') return;
+      const title = payload?.notification?.title || 'Padel Sabardes';
+      const body = payload?.notification?.body || '';
+      new Notification(title, { body, icon: '/padel-logo-192.png' });
     });
-    return () => { if (unsub) unsub(); };
+    return () => unsubscribe?.();
   }, [user]);
 
   return (
-    <div className="app-container">
-      <div className="app-content">
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
-          <Route path="/match/:matchId" element={<PrivateRoute><MatchDetailPage /></PrivateRoute>} />
-          <Route path="/tournament" element={<PrivateRoute><TournamentPage /></PrivateRoute>} />
-          <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
-          <Route path="/create-match" element={<PrivateRoute><CreateMatchPage /></PrivateRoute>} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
+    <div className="app-frame" style={{ backgroundColor: colors.background }}>
+      <div className="app-container">
+        <div className="app-content">
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
+            <Route path="/match/:matchId" element={<PrivateRoute><MatchDetailPage /></PrivateRoute>} />
+            <Route path="/create-match" element={<PrivateRoute><CreateMatchPage /></PrivateRoute>} />
+            <Route path="/tournament" element={<PrivateRoute><TournamentPage /></PrivateRoute>} />
+            <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
+            <Route path="/users" element={<PrivateRoute><AdminRoute><UsersListPage /></AdminRoute></PrivateRoute>} />
+            <Route path="/groups" element={<PrivateRoute><AdminRoute><GroupsPage /></AdminRoute></PrivateRoute>} />
+            <Route path="/groups/new" element={<PrivateRoute><AdminRoute><CreateEditGroupPage /></AdminRoute></PrivateRoute>} />
+            <Route path="/groups/:groupId" element={<PrivateRoute><AdminRoute><GroupDetailPage /></AdminRoute></PrivateRoute>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+        <BottomTabBar />
       </div>
-      <BottomTabBar />
     </div>
   );
 }
@@ -92,9 +142,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <AuthProvider>
-          <AppShell />
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <AppShell />
+          </AuthProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </BrowserRouter>
   );

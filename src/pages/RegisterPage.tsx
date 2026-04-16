@@ -1,65 +1,78 @@
 import { useState } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../services/firebaseConfig';
-import { useNavigate, Link } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 import './Auth.css';
 
 export default function RegisterPage() {
-  const [name, setName] = useState('');
+  const navigate = useNavigate();
+  const { primaryColor } = useTheme();
+  const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !email || !password) return setError('Rellena todos los campos');
-    if (password !== confirm) return setError('Las contraseñas no coinciden');
-    if (password.length < 6) return setError('La contraseña necesita al menos 6 caracteres');
-    setLoading(true);
-    setError('');
+  const handleRegister = async () => {
+    if (!nombre || !email || !password) {
+      window.alert('Error\n\nTodos los campos son obligatorios');
+      return;
+    }
+
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-      await setDoc(doc(db, 'users', cred.user.uid), {
-        email,
-        nombreApellidos: name.trim(),
+      setLoading(true);
+      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      const uid = userCredential.user.uid;
+
+      await setDoc(doc(db, 'users', uid), {
+        email: email.trim(),
+        nombreApellidos: nombre,
         role: 'user',
         grupos: [],
         fechaCreacion: new Date().toISOString(),
       });
+
       navigate('/');
-    } catch (err: any) {
-      if (err.code === 'auth/email-already-in-use') setError('Este correo ya está registrado.');
-      else setError('Error al registrar. Inténtalo de nuevo.');
-    } finally {
+    } catch (error: any) {
+      window.alert(`Error al registrar\n\n${error.message}`);
       setLoading(false);
     }
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-logo">🎾</div>
+    <div className="auth-screen">
+      <div className="auth-panel card">
         <h1 className="auth-title">Crear Cuenta</h1>
-        <p className="auth-subtitle">Regístrate en Padel Sabardes</p>
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <input className="input-field" type="text" placeholder="Nombre y apellidos" value={name} onChange={e => setName(e.target.value)} />
-          <input className="input-field" type="email" placeholder="Correo electrónico" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
-          <input className="input-field" type="password" placeholder="Contraseña" value={password} onChange={e => setPassword(e.target.value)} />
-          <input className="input-field" type="password" placeholder="Confirmar contraseña" value={confirm} onChange={e => setConfirm(e.target.value)} />
-          {error && <p className="auth-error">{error}</p>}
-          <button className="btn btn-primary auth-btn" type="submit" disabled={loading}>
-            {loading ? 'Creando...' : 'Registrarse'}
-          </button>
-        </form>
+        <input
+          className="input-field auth-input"
+          placeholder="Nombre y Apellidos"
+          value={nombre}
+          onChange={(event) => setNombre(event.target.value)}
+        />
+        <input
+          className="input-field auth-input"
+          placeholder="Correo electronico"
+          autoCapitalize="none"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+        <input
+          className="input-field auth-input"
+          placeholder="Contrasena"
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
 
-        <p className="auth-link">
-          ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
-        </p>
+        <button className="btn btn-primary auth-submit" style={{ backgroundColor: primaryColor }} onClick={handleRegister} disabled={loading}>
+          {loading ? <div className="spinner small auth-spinner"></div> : 'Registrarme'}
+        </button>
+
+        <button className="auth-link-button" onClick={() => navigate('/login')}>
+          Ya tengo cuenta. <span style={{ color: primaryColor }}>Iniciar sesion</span>
+        </button>
       </div>
     </div>
   );
