@@ -100,7 +100,7 @@ export default function CreateMatchPage() {
               setSelectedUserIds(new Set(matchData.listaInvitados || []));
             }
 
-            const newParticipants = [null, null, null, null];
+            const newParticipants: Array<any | null> = [null, null, null, null];
             (matchData.listaParticipantes || []).forEach((uid: string, index: number) => {
               if (index < 4) {
                 newParticipants[index] = fetchedUsers.find((entry) => entry.id === uid) || null;

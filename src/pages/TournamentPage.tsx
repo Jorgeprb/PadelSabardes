@@ -120,7 +120,7 @@ export default function TournamentPage() {
     });
 
     const unsubscribeTeams = onSnapshot(collection(db, 'tournamentTeams'), (snapshot) => {
-      const data = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+      const data: any[] = snapshot.docs.map((entry) => ({ id: entry.id, ...(entry.data() as any) }));
       setTeams(data);
       const mine = data.find((entry) => entry.player1Id === user?.uid || entry.player2Id === user?.uid);
       setMyTeam(mine || null);
