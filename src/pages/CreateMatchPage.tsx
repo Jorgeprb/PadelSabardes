@@ -67,6 +67,11 @@ export default function CreateMatchPage() {
   const [preParticipants, setPreParticipants] = useState<any[]>([null, null, null, null]);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
+  const [existingMatchMeta, setExistingMatchMeta] = useState<{
+    creadorId?: string;
+    creadorNombre?: string;
+    fechaCreacion?: string;
+  } | null>(null);
 
   const isAdmin = user?.role === 'admin';
 
@@ -86,6 +91,18 @@ export default function CreateMatchPage() {
           const matchSnapshot = await getDoc(doc(db, 'matches', matchId));
           if (matchSnapshot.exists()) {
             const matchData = matchSnapshot.data();
+            setExistingMatchMeta({
+              creadorId: matchData.creadorId,
+              creadorNombre: matchData.creadorNombre,
+              fechaCreacion: matchData.fechaCreacion,
+            });
+
+            if (!isAdmin && matchData.creadorId !== user?.uid) {
+              window.alert('Aviso\n\nSolo el creador del partido o un administrador pueden editarlo.');
+              navigate(-1);
+              return;
+            }
+
             const [day, month] = (matchData.fecha || '01/01').split('/');
             const parsedDate = new Date();
             parsedDate.setDate(Number(day));
@@ -115,11 +132,19 @@ export default function CreateMatchPage() {
     };
 
     initData();
-  }, [isAdmin, matchId]);
+  }, [isAdmin, matchId, navigate, user?.uid]);
 
   const dateObject = useMemo(() => new Date(`${dateValue}T${timeValue}`), [dateValue, timeValue]);
 
   const saveMatch = async () => {
+    if (!user) return;
+
+    if (matchId && !isAdmin && existingMatchMeta?.creadorId !== user.uid) {
+      window.alert('Aviso\n\nSolo el creador del partido o un administrador pueden editarlo.');
+      navigate(-1);
+      return;
+    }
+
     const finalFecha = formatDDMM(dateObject);
     const finalHora = timeValue;
     const finalInvitados = new Set<string>();
@@ -191,15 +216,18 @@ export default function CreateMatchPage() {
         hora: finalHora,
         ubicacion: 'Sabardes',
         plazas: 4,
-        creadorId: user?.uid,
-        creadorNombre: user?.nombreApellidos,
+        creadorId: existingMatchMeta?.creadorId || user.uid,
+        creadorNombre: existingMatchMeta?.creadorNombre || user.nombreApellidos,
         listaParticipantes: physicalParticipants,
         listaInvitados: Array.from(finalInvitados),
         estado: 'abierto',
       };
 
       if (matchId) {
-        await updateDoc(doc(db, 'matches', matchId), payload);
+        await updateDoc(doc(db, 'matches', matchId), {
+          ...payload,
+          ...(existingMatchMeta?.fechaCreacion ? { fechaCreacion: existingMatchMeta.fechaCreacion } : {}),
+        });
       } else {
         await addDoc(collection(db, 'matches'), { ...payload, fechaCreacion: new Date().toISOString() });
       }
@@ -211,7 +239,7 @@ export default function CreateMatchPage() {
         await sendCategorizedPushNotification(
           Array.from(usersToNotify),
           'Cambios en tu partido',
-          `El partido del ${finalFecha} a las ${finalHora} ha sido editado por el administrador.`,
+          `El partido del ${finalFecha} a las ${finalHora} ha sido actualizado.`,
           'changes',
         );
       } else {

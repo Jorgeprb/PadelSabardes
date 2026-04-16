@@ -12,7 +12,7 @@ export default function MatchDetailPage() {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { primaryColor, colors, openMatchCreation } = useTheme();
+  const { primaryColor, colors } = useTheme();
 
   const [match, setMatch] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -73,10 +73,10 @@ export default function MatchDetailPage() {
   };
 
   const executeDelete = async () => {
-    if (!matchId) return;
+    if (!matchId || !(user?.role === 'admin' || match?.creadorId === user?.uid)) return;
     const others = (match?.listaParticipantes || []).filter((id: string) => id !== user?.uid);
     await deleteDoc(doc(db, 'matches', matchId));
-    await sendCategorizedPushNotification(others, 'Partido Cancelado', `El administrador ha cancelado el partido del ${match?.fecha}.`, 'cancellations');
+    await sendCategorizedPushNotification(others, 'Partido Cancelado', `El partido del ${match?.fecha} ha sido cancelado.`, 'cancellations');
     setShowDeleteModal(false);
     navigate(-1);
   };
@@ -103,6 +103,7 @@ export default function MatchDetailPage() {
 
   const isParticipant = match.listaParticipantes?.includes(user?.uid);
   const isTournament = !!match.isTournament;
+  const canManageMatch = user?.role === 'admin' || match.creadorId === user?.uid;
   const accentColor = isTournament ? '#D4A017' : primaryColor;
   const max = match.plazas || 4;
   const half = Math.ceil(max / 2);
@@ -158,7 +159,7 @@ export default function MatchDetailPage() {
           <button className="detail-round-button translucent" onClick={() => navigate(-1)}>
             <ArrowLeft size={24} color="#fff" />
           </button>
-          {(user?.role === 'admin' || openMatchCreation) && (
+          {canManageMatch && (
             <div className="detail-top-actions">
               <button className="detail-round-button solid" onClick={() => navigate(`/create-match?matchId=${matchId}`)}>
                 <Pencil size={20} color={accentColor} />
