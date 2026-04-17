@@ -1,17 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { collection, deleteDoc, doc, getDocs, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { CalendarDays, ChevronRight, Plus, Trophy } from 'lucide-react';
+import { CalendarDays, ChevronDown, ChevronRight, ChevronUp, Plus, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../services/firebaseConfig';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from '../context/LanguageContext';
+import WeatherIcon from '../components/WeatherIcon';
+import { useCourtWeather } from '../hooks/useCourtWeather';
+import { formatIsoDate, getHourlyFocusIndex, getHourlySliceAround, getWeatherForIsoDate, resolveMatchDateToIso } from '../services/weather';
 import './Dashboard.css';
 
-const daysString = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'];
-const daysVerbose = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
-const monthsString = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-const monthsVerbose = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const shortDayNames = {
+  es: ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'],
+  gl: ['DOM', 'LUN', 'MAR', 'MER', 'XOV', 'VEN', 'SAB'],
+} as const;
+
+const longDayNames = {
+  es: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+  gl: ['Domingo', 'Luns', 'Martes', 'Mércores', 'Xoves', 'Venres', 'Sábado'],
+} as const;
+
+const shortMonthNames = {
+  es: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+  gl: ['Xan', 'Feb', 'Mar', 'Abr', 'Mai', 'Xuñ', 'Xul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'],
+} as const;
+
+const longMonthNames = {
+  es: ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
+  gl: ['xaneiro', 'febreiro', 'marzo', 'abril', 'maio', 'xuño', 'xullo', 'agosto', 'setembro', 'outubro', 'novembro', 'decembro'],
+} as const;
 
 const parseDateStr = (fStr: string, hStr: string) => {
   const [d, mo] = (fStr || '01/01').split('/');
@@ -28,33 +46,36 @@ const parseDateStr = (fStr: string, hStr: string) => {
 
 const formatDDMM = (date: Date) => `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
 
-const formatVerboseDate = (fStr: string, hStr: string) => {
-  const ts = parseDateStr(fStr, hStr);
-  const date = new Date(ts);
-  return `${daysVerbose[date.getDay()]}, ${date.getDate()} de ${monthsVerbose[date.getMonth()]} · ${hStr}`;
-};
-
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { primaryColor, colors, isCalendarView, openMatchCreation } = useTheme();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const { forecast, loading: weatherLoading, error: weatherError } = useCourtWeather();
 
   const [matches, setMatches] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDateFilter, setSelectedDateFilter] = useState(formatDDMM(new Date()));
+  const [expandedWeather, setExpandedWeather] = useState<Record<string, boolean>>({});
 
-  const weekDays = Array.from({ length: 14 }).map((_, index) => {
+  const weekDays = useMemo(() => Array.from({ length: 14 }).map((_, index) => {
     const day = new Date();
     day.setDate(day.getDate() + index);
     return {
       format: formatDDMM(day),
-      dayName: daysString[day.getDay()],
+      iso: formatIsoDate(day),
+      dayName: shortDayNames[language][day.getDay()],
       dayNum: day.getDate(),
-      monthName: monthsString[day.getMonth()],
+      monthName: shortMonthNames[language][day.getMonth()],
     };
-  });
+  }), [language]);
+
+  const formatVerboseDate = (fStr: string, hStr: string) => {
+    const ts = parseDateStr(fStr, hStr);
+    const date = new Date(ts);
+    return `${longDayNames[language][date.getDay()]}, ${date.getDate()} de ${longMonthNames[language][date.getMonth()]} · ${hStr}`;
+  };
 
   useEffect(() => {
     getDocs(collection(db, 'users')).then((snapshot) => {
@@ -104,6 +125,13 @@ export default function DashboardPage() {
     return () => unsubscribe();
   }, [user]);
 
+  const toggleWeatherSection = (matchId: string) => {
+    setExpandedWeather((previous) => ({
+      ...previous,
+      [matchId]: !previous[matchId],
+    }));
+  };
+
   const renderCard = (item: any) => {
     const isParticipant = item.listaParticipantes?.includes(user?.uid);
     const isTournament = !!item.isTournament;
@@ -115,6 +143,16 @@ export default function DashboardPage() {
     const freeSpots = 4 - participants.length;
     const teamA = participants.slice(0, 2);
     const teamB = participants.slice(2, 4);
+    const weatherForMatch = getWeatherForIsoDate(forecast, resolveMatchDateToIso(item.fecha));
+    const focusIndex = getHourlyFocusIndex(weatherForMatch.hourly, item.hora);
+    const highlightedWeather = weatherForMatch.hourly[focusIndex] || weatherForMatch.daily;
+    const highlightedTemperature = highlightedWeather
+      ? ('temperature' in highlightedWeather ? highlightedWeather.temperature : highlightedWeather.tempMax)
+      : null;
+    const hourlySlice = getHourlySliceAround(weatherForMatch.hourly, item.hora, 3);
+    const isWeatherExpanded = !!expandedWeather[item.id];
+
+    const handleOpenMatch = () => navigate(`/match/${item.id}`);
 
     const AvatarCircle = ({ participant }: { participant: any }) => {
       const isMe = participant?.id === user?.uid;
@@ -156,7 +194,7 @@ export default function DashboardPage() {
     );
 
     return (
-      <button
+      <article
         key={item.id}
         className="matches-card"
         style={{
@@ -164,7 +202,15 @@ export default function DashboardPage() {
           borderWidth: isParticipant || isTournament ? 2 : 1,
           backgroundColor: isTournament ? '#D4A01708' : colors.surface,
         }}
-        onClick={() => navigate(`/match/${item.id}`)}
+        onClick={handleOpenMatch}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handleOpenMatch();
+          }
+        }}
+        role="button"
+        tabIndex={0}
       >
         <div className="matches-card-header">
           <div>
@@ -176,17 +222,73 @@ export default function DashboardPage() {
             </div>
             <span className="matches-card-date">{formatVerboseDate(item.fecha, item.hora)}</span>
           </div>
-          {isParticipant && (
-            <span className="matches-pill" style={{ backgroundColor: `${accentColor}22`, borderColor: accentColor, color: accentColor }}>
-              {t('joined')}
-            </span>
-          )}
+
+          <div className="matches-card-meta">
+            {isParticipant && (
+              <span className="matches-pill" style={{ backgroundColor: `${accentColor}22`, borderColor: accentColor, color: accentColor }}>
+                {t('joined')}
+              </span>
+            )}
+            {highlightedWeather && (
+              <div className="matches-weather-summary" style={{ borderColor: `${accentColor}33` }}>
+                  <WeatherIcon kind={highlightedWeather.visualKind} isDay={'isDay' in highlightedWeather ? highlightedWeather.isDay : true} size={20} color={accentColor} />
+                <div className="matches-weather-summary-copy">
+                  <span className="matches-weather-temp">{highlightedTemperature ?? '--'}°C</span>
+                  <span className="matches-weather-desc">{t(highlightedWeather.labelKey)}</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="matches-versus-row">
           {renderTeam(teamA)}
           <div className="matches-versus-label" style={{ color: primaryColor }}>vs</div>
           {renderTeam(teamB)}
+        </div>
+
+        <div className="matches-weather-shell">
+          <button
+            type="button"
+            className="matches-weather-toggle"
+            onClick={(event) => {
+              event.stopPropagation();
+              toggleWeatherSection(item.id);
+            }}
+          >
+            {isWeatherExpanded ? <ChevronUp size={18} color={accentColor} /> : <ChevronDown size={18} color={accentColor} />}
+            <span>{t('weather_hourly')}</span>
+            <span className="matches-weather-match-hour">{t('weather_match_hour')} · {item.hora}</span>
+          </button>
+
+          {isWeatherExpanded && (
+            <div className="matches-hourly-panel" onClick={(event) => event.stopPropagation()}>
+              {weatherLoading ? (
+                <p className="matches-weather-empty">{t('weather_loading')}</p>
+              ) : weatherError ? (
+                <p className="matches-weather-empty">{t('weather_error')}</p>
+              ) : hourlySlice.entries.length === 0 ? (
+                <p className="matches-weather-empty">{t('weather_unavailable')}</p>
+              ) : (
+                <div className="matches-hourly-strip">
+                  {hourlySlice.entries.map((entry, index) => {
+                    const isFocused = index === hourlySlice.selectedIndex;
+                    return (
+                      <div
+                        key={entry.isoTime}
+                        className={`matches-hourly-item ${isFocused ? 'is-focused' : ''}`}
+                        style={isFocused ? { borderColor: `${accentColor}88`, boxShadow: `0 0 0 1px ${accentColor}55 inset` } : undefined}
+                      >
+                        <span className="matches-hourly-time">{entry.hour}</span>
+                        <WeatherIcon kind={entry.visualKind} isDay={entry.isDay} size={22} color={isFocused ? accentColor : '#cbd5e1'} />
+                        <span className="matches-hourly-temp">{entry.temperature ?? '--'}°C</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="matches-card-footer">
@@ -201,7 +303,7 @@ export default function DashboardPage() {
           )}
           <ChevronRight size={26} color={item.isPast ? colors.textDim : accentColor} />
         </div>
-      </button>
+      </article>
     );
   };
 
@@ -224,14 +326,25 @@ export default function DashboardPage() {
             {weekDays.map((day) => {
               const isSelected = selectedDateFilter === day.format;
               const hasMatch = matches.some((match) => (match.fecha || '').substring(0, 5) === day.format);
+              const dayWeather = getWeatherForIsoDate(forecast, day.iso).daily;
               return (
-                <button key={day.format} className="matches-calendar-day" onClick={() => setSelectedDateFilter(day.format)}>
-                  <span className="matches-calendar-day-name" style={isSelected ? { color: primaryColor, fontWeight: 900 } : undefined}>{day.dayName}</span>
-                  <span className="matches-calendar-circle" style={isSelected ? { backgroundColor: '#111827' } : undefined}>
-                    <span style={isSelected ? { color: '#fff' } : undefined}>{day.dayNum}</span>
-                    {hasMatch && <span className="matches-calendar-badge" style={{ backgroundColor: primaryColor }}></span>}
-                  </span>
-                  <span className="matches-calendar-month" style={isSelected ? { color: primaryColor } : undefined}>{day.monthName}</span>
+                <button key={day.format} className={`matches-calendar-day ${isSelected ? 'is-selected' : ''}`} onClick={() => setSelectedDateFilter(day.format)}>
+                  <span className="matches-calendar-day-name" style={isSelected ? { color: primaryColor } : undefined}>{day.dayName}</span>
+                  <div className={`matches-calendar-day-card ${isSelected ? 'is-selected' : ''}`} style={isSelected ? { borderColor: `${primaryColor}aa`, boxShadow: `0 0 0 1px ${primaryColor}55 inset` } : undefined}>
+                    {hasMatch && <span className="matches-calendar-badge" style={{ backgroundColor: primaryColor, borderColor: colors.background }}></span>}
+                    <span className="matches-calendar-weather-icon">
+                      {dayWeather ? (
+                        <WeatherIcon kind={dayWeather.visualKind} size={18} color={isSelected ? primaryColor : '#cbd5e1'} />
+                      ) : (
+                        <span className="matches-calendar-weather-fallback">{weatherLoading ? '…' : '—'}</span>
+                      )}
+                    </span>
+                    <span className="matches-calendar-day-number">{day.dayNum}</span>
+                    <span className="matches-calendar-month">{day.monthName}</span>
+                    <span className="matches-calendar-temps">
+                      {dayWeather ? `${dayWeather.tempMax ?? '--'}°/${dayWeather.tempMin ?? '--'}°` : weatherLoading ? '...' : '--'}
+                    </span>
+                  </div>
                 </button>
               );
             })}
@@ -239,25 +352,23 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="scroll-area matches-scroll">
-        {loading ? (
-          <div className="matches-loading"><div className="spinner" style={{ borderTopColor: primaryColor }}></div></div>
-        ) : displayMatches.length === 0 ? (
-          <p className="empty-text">{isCalendarView ? `Dia despejado. No hay partidos programados para ${selectedDateFilter}.` : t('no_matches')}</p>
-        ) : (
+      {loading ? (
+        <div className="matches-loading"><div className="spinner" style={{ borderTopColor: primaryColor }}></div></div>
+      ) : (
+        <div className="scroll-area matches-scroll">
           <div className="matches-list">
-            {displayMatches.map((match) => renderCard(match))}
+            {displayMatches.length === 0 ? (
+              <p className="empty-text">{t('no_matches')}</p>
+            ) : (
+              displayMatches.map((item) => renderCard(item))
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {(user?.role === 'admin' || openMatchCreation) && (
-        <button
-          className="matches-fab"
-          style={{ backgroundColor: primaryColor }}
-          onClick={() => navigate(`/create-match${isCalendarView ? `?initialDateStr=${selectedDateFilter}` : ''}`)}
-        >
-          <Plus size={32} color="#fff" />
+        <button className="matches-fab" style={{ backgroundColor: primaryColor }} onClick={() => navigate(`/create-match?initialDateStr=${selectedDateFilter}`)}>
+          <Plus size={30} color="#fff" />
         </button>
       )}
     </div>

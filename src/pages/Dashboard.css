@@ -20,7 +20,7 @@
 
 .matches-calendar-bar {
   display: flex;
-  padding: 14px 0;
+  padding: 14px 0 18px;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -34,7 +34,7 @@
 
 .matches-calendar-days {
   display: flex;
-  gap: 20px;
+  gap: 12px;
   overflow-x: auto;
   padding-right: 16px;
   scrollbar-width: none;
@@ -45,49 +45,82 @@
 }
 
 .matches-calendar-day {
-  min-width: 48px;
+  min-width: 88px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .matches-calendar-day-name {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   color: var(--text-secondary);
   font-size: calc(11px * var(--font-scale));
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: 0.7px;
 }
 
-.matches-calendar-circle {
+.matches-calendar-day-card {
   position: relative;
-  width: 48px;
-  height: 48px;
-  margin-bottom: 6px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 88px;
+  min-height: 126px;
+  padding: 12px 10px 10px;
+  border-radius: 24px;
   border: 1px solid var(--border-color);
-  background: var(--surface-color);
-  color: var(--text-primary);
-  font-size: calc(17px * var(--font-scale));
-  font-weight: 900;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  background:
+    radial-gradient(circle at top, rgba(14, 165, 233, 0.08), transparent 55%),
+    linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.94));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  box-shadow: var(--shadow-soft);
+}
+
+.matches-calendar-day-card.is-selected {
+  background:
+    radial-gradient(circle at top, rgba(14, 165, 233, 0.18), transparent 55%),
+    linear-gradient(180deg, rgba(17, 24, 39, 0.98), rgba(15, 23, 42, 0.96));
 }
 
 .matches-calendar-badge {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 10px;
+  right: 10px;
   width: 8px;
   height: 8px;
   border-radius: 999px;
   border: 1px solid var(--bg-color);
 }
 
+.matches-calendar-weather-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  color: var(--text-primary);
+}
+
+.matches-calendar-weather-fallback {
+  color: var(--text-secondary);
+  font-size: calc(16px * var(--font-scale));
+}
+
+.matches-calendar-day-number {
+  color: var(--text-primary);
+  font-size: calc(28px * var(--font-scale));
+  font-weight: 900;
+  line-height: 1;
+}
+
 .matches-calendar-month {
   color: var(--text-secondary);
-  font-size: calc(11px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
+}
+
+.matches-calendar-temps {
+  color: #cbd5e1;
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 700;
 }
 
 .matches-card {
@@ -98,6 +131,7 @@
   border-radius: 24px;
   background: var(--surface-color);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
 }
 
 .matches-card:active {
@@ -108,7 +142,8 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 20px;
+  gap: 14px;
+  margin-bottom: 18px;
 }
 
 .matches-card-title-row {
@@ -133,6 +168,13 @@
   font-weight: 500;
 }
 
+.matches-card-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
 .matches-pill {
   border: 1px solid;
   border-radius: 10px;
@@ -142,11 +184,41 @@
   text-transform: uppercase;
 }
 
+.matches-weather-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 120px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  background: rgba(15, 23, 42, 0.58);
+}
+
+.matches-weather-summary-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.matches-weather-temp {
+  color: var(--text-primary);
+  font-size: calc(18px * var(--font-scale));
+  font-weight: 900;
+  line-height: 1;
+}
+
+.matches-weather-desc {
+  color: var(--text-secondary);
+  font-size: calc(12px * var(--font-scale));
+}
+
 .matches-versus-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .matches-team-group {
@@ -206,6 +278,81 @@
   text-overflow: ellipsis;
 }
 
+.matches-weather-shell {
+  padding: 0 0 16px;
+}
+
+.matches-weather-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-primary);
+  font-size: calc(15px * var(--font-scale));
+  font-weight: 800;
+  text-align: left;
+}
+
+.matches-weather-match-hour {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 700;
+}
+
+.matches-hourly-panel {
+  margin-top: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  background: rgba(15, 23, 42, 0.45);
+  padding: 14px 12px;
+}
+
+.matches-hourly-strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.matches-hourly-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.matches-hourly-item {
+  min-width: 74px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(51, 65, 85, 0.85);
+  background: rgba(15, 23, 42, 0.82);
+}
+
+.matches-hourly-item.is-focused {
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.12), rgba(15, 23, 42, 0.88));
+}
+
+.matches-hourly-time {
+  color: var(--text-primary);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 800;
+}
+
+.matches-hourly-temp {
+  color: #cbd5e1;
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 800;
+}
+
+.matches-weather-empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: calc(13px * var(--font-scale));
+}
+
 .matches-card-footer {
   display: flex;
   align-items: center;
@@ -235,4 +382,23 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 400px) {
+  .matches-card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .matches-card-meta {
+    align-items: stretch;
+  }
+
+  .matches-weather-summary-copy {
+    align-items: flex-start;
+  }
+
+  .matches-weather-match-hour {
+    display: none;
+  }
 }

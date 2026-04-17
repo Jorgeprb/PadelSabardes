@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { addDoc, collection, doc, getDoc, getDocs, updateDoc } from 'firebase/firestore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Globe, User, Users, UserPlus, X } from 'lucide-react';
@@ -6,10 +6,16 @@ import { db } from '../services/firebaseConfig';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from '../context/LanguageContext';
+import WeatherIcon from '../components/WeatherIcon';
+import { useCourtWeather } from '../hooks/useCourtWeather';
+import { getHourlyFocusIndex, getWeatherForIsoDate } from '../services/weather';
 import { sendCategorizedPushNotification } from '../services/PushService';
 import './CreateMatch.css';
 
-const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const dayNames = {
+  es: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+  gl: ['Domingo', 'Luns', 'Martes', 'Mércores', 'Xoves', 'Venres', 'Sábado'],
+} as const;
 
 const formatDDMM = (date: Date) => {
   const day = String(date.getDate()).padStart(2, '0');
@@ -53,7 +59,8 @@ export default function CreateMatchPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { primaryColor, colors } = useTheme();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const { forecast, loading: weatherLoading, error: weatherError } = useCourtWeather();
 
   const [dateValue, setDateValue] = useState(() => toDateInputValue(buildDateFromDDMM(initialDateStr)));
   const [timeValue, setTimeValue] = useState('17:00');
@@ -72,6 +79,8 @@ export default function CreateMatchPage() {
     creadorNombre?: string;
     fechaCreacion?: string;
   } | null>(null);
+
+  const hourlyItemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const isAdmin = user?.role === 'admin';
 
@@ -135,6 +144,27 @@ export default function CreateMatchPage() {
   }, [isAdmin, matchId, navigate, user?.uid]);
 
   const dateObject = useMemo(() => new Date(`${dateValue}T${timeValue}`), [dateValue, timeValue]);
+  const weatherForSelectedDay = useMemo(() => getWeatherForIsoDate(forecast, dateValue), [forecast, dateValue]);
+  const selectedHourlyIndex = useMemo(
+    () => getHourlyFocusIndex(weatherForSelectedDay.hourly, timeValue),
+    [weatherForSelectedDay.hourly, timeValue],
+  );
+  const highlightedHour = weatherForSelectedDay.hourly[selectedHourlyIndex] || null;
+
+  useEffect(() => {
+    const focusedHourly = weatherForSelectedDay.hourly[selectedHourlyIndex];
+    if (!focusedHourly) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      hourlyItemRefs.current[focusedHourly.isoTime]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedHourlyIndex, weatherForSelectedDay.hourly]);
 
   const saveMatch = async () => {
     if (!user) return;
@@ -387,6 +417,51 @@ export default function CreateMatchPage() {
           </div>
         </div>
 
+        <div className="create-match-section-card create-match-weather-card">
+          <div className="create-match-weather-head">
+            <div>
+              <div className="create-match-section-title">{t('weather_forecast')}</div>
+              <div className="create-match-weather-caption">{t('weather_match_hour')} · {timeValue}</div>
+            </div>
+            {highlightedHour && (
+              <div className="create-match-weather-summary" style={{ borderColor: `${primaryColor}33` }}>
+                <WeatherIcon kind={highlightedHour.visualKind} isDay={highlightedHour.isDay} size={24} color={primaryColor} />
+                <div className="create-match-weather-summary-copy">
+                  <span className="create-match-weather-summary-temp">{highlightedHour.temperature ?? '--'}°C</span>
+                  <span className="create-match-weather-summary-desc">{t(highlightedHour.labelKey)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {weatherLoading ? (
+            <p className="create-match-weather-empty">{t('weather_loading')}</p>
+          ) : weatherError ? (
+            <p className="create-match-weather-empty">{t('weather_error')}</p>
+          ) : weatherForSelectedDay.hourly.length === 0 ? (
+            <p className="create-match-weather-empty">{t('weather_unavailable')}</p>
+          ) : (
+            <div className="create-match-hourly-scroll">
+              {weatherForSelectedDay.hourly.map((entry, index) => {
+                const isSelected = index === selectedHourlyIndex;
+                return (
+                  <div
+                    key={entry.isoTime}
+                    ref={(node) => { hourlyItemRefs.current[entry.isoTime] = node; }}
+                    className={`create-match-hourly-card ${isSelected ? 'is-selected' : ''}`}
+                    style={isSelected ? { borderColor: `${primaryColor}aa`, boxShadow: `0 0 0 1px ${primaryColor}55 inset, 0 0 18px ${primaryColor}25` } : undefined}
+                  >
+                    <span className="create-match-hourly-time">{entry.hour}</span>
+                    <WeatherIcon kind={entry.visualKind} isDay={entry.isDay} size={28} color={isSelected ? primaryColor : '#cbd5e1'} />
+                    <span className="create-match-hourly-temp">{entry.temperature ?? '--'}°C</span>
+                    {isSelected && <span className="create-match-hourly-tag">{t('weather_selected_hour')}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         <div className="create-match-section-card">
           <div className="create-match-section-title">{t('players')}</div>
           <div className="create-match-team-row">
@@ -431,7 +506,7 @@ export default function CreateMatchPage() {
         </div>
 
         <div className="create-match-preview-note">
-          {dayNames[dateObject.getDay()]} {formatDDMM(dateObject)} · {formatHHMM(dateObject)}
+          {dayNames[language][dateObject.getDay()]} {formatDDMM(dateObject)} · {formatHHMM(dateObject)}
         </div>
       </div>
 

@@ -107,6 +107,110 @@
   font-weight: 900;
 }
 
+.create-match-weather-card {
+  background:
+    radial-gradient(circle at top, rgba(14, 165, 233, 0.12), transparent 58%),
+    linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.94));
+}
+
+.create-match-weather-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.create-match-weather-caption {
+  color: var(--text-secondary);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 700;
+}
+
+.create-match-weather-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 132px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  border: 1px solid var(--border-color);
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.create-match-weather-summary-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.create-match-weather-summary-temp {
+  color: var(--text-primary);
+  font-size: calc(20px * var(--font-scale));
+  font-weight: 900;
+  line-height: 1;
+}
+
+.create-match-weather-summary-desc {
+  color: var(--text-secondary);
+  font-size: calc(12px * var(--font-scale));
+}
+
+.create-match-weather-empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: calc(14px * var(--font-scale));
+}
+
+.create-match-hourly-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.create-match-hourly-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.create-match-hourly-card {
+  min-width: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(51, 65, 85, 0.85);
+  background: rgba(15, 23, 42, 0.82);
+  box-shadow: 0 6px 14px rgba(2, 6, 23, 0.18);
+}
+
+.create-match-hourly-card.is-selected {
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.16), rgba(15, 23, 42, 0.92));
+}
+
+.create-match-hourly-time {
+  color: var(--text-primary);
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 900;
+}
+
+.create-match-hourly-temp {
+  color: #dbeafe;
+  font-size: calc(16px * var(--font-scale));
+  font-weight: 900;
+}
+
+.create-match-hourly-tag {
+  color: var(--primary-color);
+  font-size: calc(11px * var(--font-scale));
+  font-weight: 800;
+  text-align: center;
+}
+
 .create-match-team-row {
   position: relative;
   display: flex;
@@ -329,5 +433,9 @@
   .create-match-slot-empty {
     width: 56px;
     height: 56px;
+  }
+
+  .create-match-weather-head {
+    flex-direction: column;
   }
 }
