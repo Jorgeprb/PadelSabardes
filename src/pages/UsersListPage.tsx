@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Trash2 } from 'lucide-react';
-import { arrayRemove, collection, deleteDoc, doc, getDocs, onSnapshot, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebaseConfig';
+import { deleteUserAsAdmin } from '../services/adminService';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from '../context/LanguageContext';
 import './AdminPages.css';
@@ -36,38 +37,7 @@ export default function UsersListPage() {
     setDeleting(true);
 
     try {
-      const uid = deleteTarget.id;
-
-      const matchesSnapshot = await getDocs(collection(db, 'matches'));
-      await Promise.all(
-        matchesSnapshot.docs.map(async (matchDoc) => {
-          const data = matchDoc.data();
-          const updates: Record<string, unknown> = {};
-
-          if (data.listaParticipantes?.includes(uid)) {
-            updates.listaParticipantes = arrayRemove(uid);
-          }
-          if (data.listaInvitados?.includes(uid)) {
-            updates.listaInvitados = arrayRemove(uid);
-          }
-
-          if (Object.keys(updates).length > 0) {
-            await updateDoc(doc(db, 'matches', matchDoc.id), updates);
-          }
-        }),
-      );
-
-      const teamsSnapshot = await getDocs(collection(db, 'tournamentTeams'));
-      await Promise.all(
-        teamsSnapshot.docs.map(async (teamDoc) => {
-          const data = teamDoc.data();
-          if (data.player1Id === uid || data.player2Id === uid) {
-            await deleteDoc(doc(db, 'tournamentTeams', teamDoc.id));
-          }
-        }),
-      );
-
-      await deleteDoc(doc(db, 'users', uid));
+      await deleteUserAsAdmin(deleteTarget.id);
       setDeleteTarget(null);
       window.alert(`Eliminado\n\n${deleteTarget.nombreApellidos} ha sido borrado del sistema completamente.`);
     } catch (error: any) {

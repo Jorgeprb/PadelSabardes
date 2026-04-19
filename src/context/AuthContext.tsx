@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import { auth, db, requestPushNotificationToken } from '../services/firebaseConfig';
 
@@ -73,6 +73,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         try {
+          const deletedSnapshot = await getDoc(doc(db, 'deletedUsers', firebaseUser.uid));
+          if (deletedSnapshot.exists()) {
+            await signOut(auth).catch(() => {});
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+
           await setDoc(userDocRef, {
             email: firebaseUser.email || '',
             nombreApellidos: 'Usuario Externo',

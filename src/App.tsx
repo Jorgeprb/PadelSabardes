@@ -106,8 +106,8 @@ function AppShell() {
     const unsubscribe = setupMessageHandler((payload: any) => {
       if (typeof window === 'undefined' || !('Notification' in window)) return;
       if (Notification.permission !== 'granted') return;
-      const title = payload?.notification?.title || 'Padel Sabardes';
-      const body = payload?.notification?.body || '';
+      const title = payload?.notification?.title || payload?.data?.title || 'Padel Sabardes';
+      const body = payload?.notification?.body || payload?.data?.body || '';
       new Notification(title, { body, icon: '/padel-logo-192.png' });
     });
     return () => unsubscribe?.();

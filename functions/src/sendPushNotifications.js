@@ -1,0 +1,105 @@
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { db, messaging } = require("./firebase");
+
+const REGION = process.env.FUNCTIONS_REGION || "us-central1";
+const ALLOWED_CATEGORIES = new Set(["invitations", "joins", "leaves", "changes", "cancellations", "always"]);
+const INVALID_TOKEN_ERRORS = new Set([
+  "messaging/invalid-argument",
+  "messaging/invalid-registration-token",
+  "messaging/registration-token-not-registered",
+]);
+
+const sendPushNotifications = onCall({ region: REGION }, async (request) => {
+  if (!request.auth?.uid) {
+    throw new HttpsError("unauthenticated", "Debes iniciar sesión para enviar notificaciones.");
+  }
+
+  const uids = Array.isArray(request.data?.uids) ? request.data.uids.filter((entry) => typeof entry === "string") : [];
+  const title = typeof request.data?.title === "string" ? request.data.title.trim() : "";
+  const body = typeof request.data?.body === "string" ? request.data.body.trim() : "";
+  const category = typeof request.data?.category === "string" ? request.data.category : "always";
+
+  if (uids.length === 0 || !title || !body || !ALLOWED_CATEGORIES.has(category)) {
+    throw new HttpsError("invalid-argument", "Faltan datos válidos para enviar la notificación.");
+  }
+
+  const uniqueUids = [...new Set(uids)];
+  const userRefs = uniqueUids.map((uid) => db.collection("users").doc(uid));
+  const userSnapshots = await db.getAll(...userRefs);
+
+  const messages = [];
+  const tokenOwners = [];
+
+  userSnapshots.forEach((snapshot) => {
+    if (!snapshot.exists) return;
+
+    const userData = snapshot.data() || {};
+    const pushToken = typeof userData.pushToken === "string" ? userData.pushToken : "";
+    if (!pushToken) return;
+
+    if (userData.notifPrefs?.pushEnabled === false) return;
+    if (category !== "always" && userData.notifPrefs?.[category] === false) return;
+
+    messages.push({
+      token: pushToken,
+      notification: {
+        title,
+        body,
+      },
+      data: {
+        body,
+        category,
+        source: "padelsabardes",
+        title,
+        url: "/",
+      },
+      webpush: {
+        notification: {
+          badge: "/padel-logo-192.png",
+          body,
+          icon: "/padel-logo-192.png",
+          tag: `padelsabardes-${category}`,
+        },
+        fcmOptions: {
+          link: "/",
+        },
+      },
+    });
+
+    tokenOwners.push({
+      ref: snapshot.ref,
+      token: pushToken,
+    });
+  });
+
+  if (messages.length === 0) {
+    return { sentCount: 0, skippedCount: uniqueUids.length };
+  }
+
+  const response = await messaging.sendEach(messages);
+
+  const cleanupTasks = [];
+  response.responses.forEach((entry, index) => {
+    if (entry.success) return;
+    const errorCode = entry.error?.code;
+    if (!INVALID_TOKEN_ERRORS.has(errorCode)) return;
+
+    const owner = tokenOwners[index];
+    if (!owner) return;
+
+    cleanupTasks.push(owner.ref.set({ pushToken: null }, { merge: true }));
+  });
+
+  if (cleanupTasks.length > 0) {
+    await Promise.allSettled(cleanupTasks);
+  }
+
+  return {
+    sentCount: response.successCount,
+    skippedCount: uniqueUids.length - response.successCount,
+  };
+});
+
+module.exports = {
+  sendPushNotifications,
+};
