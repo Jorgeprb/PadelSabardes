@@ -146,9 +146,7 @@ export default function DashboardPage() {
     const weatherForMatch = getWeatherForIsoDate(forecast, resolveMatchDateToIso(item.fecha));
     const focusIndex = getHourlyFocusIndex(weatherForMatch.hourly, item.hora);
     const highlightedWeather = weatherForMatch.hourly[focusIndex] || weatherForMatch.daily;
-    const highlightedTemperature = highlightedWeather
-      ? ('temperature' in highlightedWeather ? highlightedWeather.temperature : highlightedWeather.tempMax)
-      : null;
+    const highlightedTemperature = weatherForMatch.hourly[focusIndex]?.temperature ?? weatherForMatch.daily?.tempMax ?? null;
     const hourlySlice = getHourlySliceAround(weatherForMatch.hourly, item.hora, 3);
     const isWeatherExpanded = !!expandedWeather[item.id];
 

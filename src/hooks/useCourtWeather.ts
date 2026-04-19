@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { CourtWeatherForecast, fetchCourtWeatherForecast } from '../services/weather';
+import { fetchCourtWeatherForecast } from '../services/weather';
+import type { CourtWeatherForecast } from '../services/weather';
 
 export const useCourtWeather = () => {
   const [forecast, setForecast] = useState<CourtWeatherForecast | null>(null);

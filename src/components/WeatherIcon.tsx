@@ -1,5 +1,5 @@
 import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, MoonStar, Sun } from 'lucide-react';
-import { WeatherVisualKind } from '../services/weather';
+import type { WeatherVisualKind } from '../services/weather';
 
 type WeatherIconProps = {
   kind: WeatherVisualKind;
