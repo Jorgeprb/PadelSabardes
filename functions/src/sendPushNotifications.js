@@ -27,7 +27,7 @@ const sendPushNotifications = onCall({ region: REGION }, async (request) => {
   const userRefs = uniqueUids.map((uid) => db.collection("users").doc(uid));
   const userSnapshots = await db.getAll(...userRefs);
 
-  const messages = [];
+  const tokens = [];
   const tokenOwners = [];
 
   userSnapshots.forEach((snapshot) => {
@@ -40,48 +40,59 @@ const sendPushNotifications = onCall({ region: REGION }, async (request) => {
     if (userData.notifPrefs?.pushEnabled === false) return;
     if (category !== "always" && userData.notifPrefs?.[category] === false) return;
 
-    messages.push({
-      token: pushToken,
-      notification: {
-        title,
-        body,
-      },
-      data: {
-        body,
-        category,
-        source: "padelsabardes",
-        title,
-        url: "/",
-      },
-      webpush: {
-        notification: {
-          badge: "/padel-logo-192.png",
-          body,
-          icon: "/padel-logo-192.png",
-          tag: `padelsabardes-${category}`,
-        },
-        fcmOptions: {
-          link: "/",
-        },
-      },
-    });
-
+    tokens.push(pushToken);
     tokenOwners.push({
       ref: snapshot.ref,
       token: pushToken,
+      uid: snapshot.id,
     });
   });
 
-  if (messages.length === 0) {
+  if (tokens.length === 0) {
+    console.log("[Push] No valid recipients for category:", category, "uids:", uniqueUids);
     return { sentCount: 0, skippedCount: uniqueUids.length };
   }
 
-  const response = await messaging.sendEach(messages);
+  const response = await messaging.sendEachForMulticast({
+    tokens,
+    notification: {
+      title,
+      body,
+    },
+    data: {
+      body,
+      category,
+      source: "padelsabardes",
+      title,
+      url: "/",
+    },
+    webpush: {
+      headers: {
+        TTL: "300",
+        Urgency: "high",
+      },
+      notification: {
+        title,
+        badge: "/padel-logo-192.png",
+        body,
+        icon: "/padel-logo-192.png",
+        tag: `padelsabardes-${category}`,
+      },
+      fcmOptions: {
+        link: "/",
+      },
+    },
+  });
 
   const cleanupTasks = [];
   response.responses.forEach((entry, index) => {
     if (entry.success) return;
     const errorCode = entry.error?.code;
+    console.error("[Push] Delivery failed", {
+      uid: tokenOwners[index]?.uid,
+      errorCode,
+      errorMessage: entry.error?.message,
+    });
     if (!INVALID_TOKEN_ERRORS.has(errorCode)) return;
 
     const owner = tokenOwners[index];
