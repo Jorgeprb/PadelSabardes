@@ -5,10 +5,10 @@ import { getFunctions } from 'firebase/functions';
 import { getStorage } from 'firebase/storage';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
-const DEFAULT_VAPID_KEY = 'BNUr7YkSeVJfhqyXBjRggYOov7T98P_nyk6uxUfmIQK_qaVFqWUAT4Oa0R_LTpN448dq3SQOrNe8MlQdE51LtWo';
+const DEFAULT_VAPID_KEY = 'BNUn7YkSeVJfhqyXBjRggYOov7T98R_nyK6uxUfmIQK_qaVFqWUAT40a0R_LTpN448dq3SQ0rNe8MlQdE51LtWo';
 
 export const VAPID_KEY = (import.meta.env.VITE_FIREBASE_VAPID_KEY || DEFAULT_VAPID_KEY).trim();
-const FUNCTIONS_REGION = import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION || 'us-central1';
+const FUNCTIONS_REGION = import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION || 'us-east1';
 const MESSAGING_SW_URL = '/firebase-messaging-sw.js';
 const MESSAGING_SW_SCOPE = '/firebase-cloud-messaging-push-scope/';
 

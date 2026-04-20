@@ -1,7 +1,7 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db, messaging } = require("./firebase");
 
-const REGION = process.env.FUNCTIONS_REGION || "us-central1";
+const REGION = process.env.FUNCTIONS_REGION || "us-east1";
 const ALLOWED_CATEGORIES = new Set(["invitations", "joins", "leaves", "changes", "cancellations", "always"]);
 const INVALID_TOKEN_ERRORS = new Set([
   "messaging/invalid-argument",

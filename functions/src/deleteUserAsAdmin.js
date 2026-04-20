@@ -2,7 +2,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { assertAdmin } = require("./assertAdmin");
 const { auth, db, FieldValue } = require("./firebase");
 
-const REGION = process.env.FUNCTIONS_REGION || "us-central1";
+const REGION = process.env.FUNCTIONS_REGION || "us-east1";
 
 const commitBatches = async (operations) => {
   if (operations.length === 0) return;
