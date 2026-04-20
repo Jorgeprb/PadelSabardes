@@ -5,7 +5,7 @@ import { getFunctions } from 'firebase/functions';
 import { getStorage } from 'firebase/storage';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
-const DEFAULT_VAPID_KEY = 'BHp60022y5xxOk5-4YhnTll73zkxDRF4zT9RpeFL98ua3Y2zN_5W_qDKqqGZK38qdIDVXHWxEuS_dTGF4IpeWqY';
+const DEFAULT_VAPID_KEY = 'BNUr7YkSeVJfhqyXBjRggYOov7T98P_nyk6uxUfmIQK_qaVFqWUAT4Oa0R_LTpN448dq3SQOrNe8MlQdE51LtWo';
 
 export const VAPID_KEY = (import.meta.env.VITE_FIREBASE_VAPID_KEY || DEFAULT_VAPID_KEY).trim();
 const FUNCTIONS_REGION = import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION || 'us-central1';
@@ -13,12 +13,13 @@ const MESSAGING_SW_URL = '/firebase-messaging-sw.js';
 const MESSAGING_SW_SCOPE = '/firebase-cloud-messaging-push-scope/';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyD-QROuJVLdkF6g4mxdbB4a8KsF0oyNxMY',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'studio-3178011448-9d904.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'studio-3178011448-9d904',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'studio-3178011448-9d904.firebasestorage.app',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '687039821493',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:687039821493:web:62effc866af43ea803b0fc',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyCm1VfiIgEuQgRoK5L9Ad2ejHCdLg9B6yc',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'padelsabardes.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'padelsabardes',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'padelsabardes.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '1008669431729',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:1008669431729:web:836365c84893c6850c4f90',
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || 'G-TN2J9P47LR',
 };
 
 export const app = initializeApp(firebaseConfig);
