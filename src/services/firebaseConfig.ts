@@ -95,3 +95,35 @@ export const setupMessageHandler = (callback: (payload: unknown) => void) => {
   if (!messaging) return undefined;
   return onMessage(messaging, (payload) => callback(payload));
 };
+
+export const showForegroundNotification = async (payload: any) => {
+  if (typeof window === 'undefined' || !('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+
+  const title = payload?.notification?.title || payload?.data?.title || 'Padel Sabardes';
+  const body = payload?.notification?.body || payload?.data?.body || '';
+  const options = {
+    body,
+    icon: '/padel-logo-192.png',
+    badge: '/padel-logo-192.png',
+    data: {
+      url: payload?.data?.url || '/',
+    },
+  };
+
+  try {
+    const registration = await ensureMessagingServiceWorkerRegistration();
+    if (registration?.showNotification) {
+      await registration.showNotification(title, options);
+      return;
+    }
+  } catch (error) {
+    console.warn('[Messaging] Error showing foreground notification via service worker:', error);
+  }
+
+  try {
+    new Notification(title, options);
+  } catch (error) {
+    console.warn('[Messaging] Error showing foreground notification via Notification constructor:', error);
+  }
+};

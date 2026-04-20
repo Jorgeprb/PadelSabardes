@@ -105,6 +105,14 @@ const sendPushNotifications = onCall({ region: REGION }, async (request) => {
     await Promise.allSettled(cleanupTasks);
   }
 
+  console.log("[Push] Delivery summary", {
+    sentCount: response.successCount,
+    failureCount: response.failureCount,
+    tokenCount: tokens.length,
+    requestedUsers: uniqueUids.length,
+    category,
+  });
+
   return {
     sentCount: response.successCount,
     skippedCount: uniqueUids.length - response.successCount,

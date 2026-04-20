@@ -23,7 +23,7 @@ import UsersListPage from './pages/UsersListPage';
 import GroupsPage from './pages/GroupsPage';
 import CreateEditGroupPage from './pages/CreateEditGroupPage';
 import GroupDetailPage from './pages/GroupDetailPage';
-import { setupMessageHandler } from './services/firebaseConfig';
+import { setupMessageHandler, showForegroundNotification } from './services/firebaseConfig';
 
 function FullScreenLoader() {
   const { primaryColor } = useTheme();
@@ -104,11 +104,7 @@ function AppShell() {
   useEffect(() => {
     if (!user) return undefined;
     const unsubscribe = setupMessageHandler((payload: any) => {
-      if (typeof window === 'undefined' || !('Notification' in window)) return;
-      if (Notification.permission !== 'granted') return;
-      const title = payload?.notification?.title || payload?.data?.title || 'Padel Sabardes';
-      const body = payload?.notification?.body || payload?.data?.body || '';
-      new Notification(title, { body, icon: '/padel-logo-192.png' });
+      void showForegroundNotification(payload);
     });
     return () => unsubscribe?.();
   }, [user]);
