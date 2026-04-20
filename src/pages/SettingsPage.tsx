@@ -245,12 +245,23 @@ export default function SettingsPage() {
   };
 
   const retryNotificationPermissions = async () => {
+    if (!user?.uid) return;
+
     const token = await requestPushNotificationToken();
     const permission = typeof Notification !== 'undefined' ? Notification.permission : 'default';
-    if (token || permission === 'granted') {
+
+    if (token) {
+      await setDoc(doc(db, 'users', user.uid), { pushToken: token }, { merge: true });
+      await refreshUser();
       window.alert('✅ Permisos concedidos\n\nLas notificaciones están activadas.');
       return;
     }
+
+    if (permission === 'granted') {
+      window.alert('❌ Error\n\nSe concedieron los permisos, pero no se pudo registrar el dispositivo para recibir notificaciones.');
+      return;
+    }
+
     window.alert('❌ Permisos denegados\n\nVe a Ajustes del sistema para activarlas manualmente.');
   };
 

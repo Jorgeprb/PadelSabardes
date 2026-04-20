@@ -5,7 +5,9 @@ import { getFunctions } from 'firebase/functions';
 import { getStorage } from 'firebase/storage';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
-export const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BEl62iUvXXXXXXX-YYYYYYYYYYYYYYYYYYYYY_ZZZZZZZZZZZZ';
+const DEFAULT_VAPID_KEY = 'BHp60022y5xxOk5-4YhnTll73zkxDRF4zT9RpeFL98ua3Y2zN_5W_qDKqqGZK38qdIDVXHWxEuS_dTGF4IpeWqY';
+
+export const VAPID_KEY = (import.meta.env.VITE_FIREBASE_VAPID_KEY || DEFAULT_VAPID_KEY).trim();
 const FUNCTIONS_REGION = import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION || 'us-central1';
 const MESSAGING_SW_URL = '/firebase-messaging-sw.js';
 const MESSAGING_SW_SCOPE = '/firebase-cloud-messaging-push-scope/';
@@ -55,9 +57,14 @@ const ensureMessagingServiceWorkerRegistration = async () => {
   }
 
   const scopedRegistration = await navigator.serviceWorker.getRegistration(new URL(MESSAGING_SW_SCOPE, window.location.origin).toString());
-  if (scopedRegistration) return scopedRegistration;
+  if (scopedRegistration) {
+    await navigator.serviceWorker.ready;
+    return scopedRegistration;
+  }
 
-  return navigator.serviceWorker.register(MESSAGING_SW_URL, { scope: MESSAGING_SW_SCOPE });
+  const registration = await navigator.serviceWorker.register(MESSAGING_SW_URL, { scope: MESSAGING_SW_SCOPE });
+  await navigator.serviceWorker.ready;
+  return registration;
 };
 
 export const requestPushNotificationToken = async () => {
