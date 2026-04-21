@@ -24,6 +24,12 @@ import { auth, db, requestPushNotificationToken, storage } from '../services/fir
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from '../context/LanguageContext';
+import {
+  DEFAULT_NOTIFICATION_TEMPLATES,
+  NOTIFICATION_TEMPLATE_CATEGORIES,
+  normalizeNotificationTemplates,
+  type NotificationTemplateMap,
+} from '../services/notificationTemplates';
 import './Settings.css';
 
 const COLOR_PALETTE = [
@@ -92,6 +98,9 @@ export default function SettingsPage() {
     changes: true,
     cancellations: true,
   });
+  const [notificationTemplates, setNotificationTemplates] = useState<NotificationTemplateMap>(DEFAULT_NOTIFICATION_TEMPLATES);
+  const [notificationTemplatesExpanded, setNotificationTemplatesExpanded] = useState(false);
+  const [savingNotificationTemplates, setSavingNotificationTemplates] = useState(false);
 
   useEffect(() => {
     setNameInput(user?.nombreApellidos || '');
@@ -115,9 +124,14 @@ export default function SettingsPage() {
       }
     });
 
+    const unsubscribeSettings = onSnapshot(doc(db, 'config', 'notificationTemplates'), (snapshot) => {
+      setNotificationTemplates(normalizeNotificationTemplates(snapshot.data()));
+    });
+
     return () => {
       unsubscribeNotifPrefs();
       unsubscribeTournamentSlots();
+      unsubscribeSettings();
     };
   }, [user?.uid]);
 
@@ -241,6 +255,28 @@ export default function SettingsPage() {
       window.alert(`${t('error')}\n\n${error.message}`);
     } finally {
       setSavingMasterPassword(false);
+    }
+  };
+
+  const updateNotificationTemplate = (category: keyof NotificationTemplateMap, field: 'title' | 'body', value: string) => {
+    setNotificationTemplates((previous) => ({
+      ...previous,
+      [category]: {
+        ...previous[category],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSaveNotificationTemplates = async () => {
+    setSavingNotificationTemplates(true);
+    try {
+      await setDoc(doc(db, 'config', 'notificationTemplates'), notificationTemplates, { merge: true });
+      window.alert(`${t('success')}\n\n${t('notif_templates_saved')}`);
+    } catch (error: any) {
+      window.alert(`${t('error')}\n\n${error.message}`);
+    } finally {
+      setSavingNotificationTemplates(false);
     }
   };
 
@@ -475,6 +511,66 @@ export default function SettingsPage() {
               <ToggleRow icon={<Clock3 size={18} color={primaryColor} />} label={t('notif_changes')} value={notifPrefs.changes} onToggle={(value) => saveNotifPref('changes', value)} />
               <div className="settings-divider"></div>
               <ToggleRow icon={<X size={18} color={primaryColor} />} label={t('notif_cancellations')} value={notifPrefs.cancellations} onToggle={(value) => saveNotifPref('cancellations', value)} />
+            </>
+          )}
+
+          {user?.role === 'admin' && (
+            <>
+              <div className="settings-divider"></div>
+              <button className="settings-action-row" onClick={() => setNotificationTemplatesExpanded((previous) => !previous)}>
+                <div className="settings-action-left">
+                  <span className="settings-action-icon"><Bell size={18} color={primaryColor} /></span>
+                  <span>{t('notif_templates_title')}</span>
+                </div>
+                <ChevronRight
+                  size={18}
+                  color={colors.textDim}
+                  style={{ transform: notificationTemplatesExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
+                />
+              </button>
+
+              {notificationTemplatesExpanded && (
+                <>
+                  <div className="settings-divider"></div>
+                  <div className="settings-template-stack">
+                    <p className="settings-help-text">{t('notif_templates_help')}</p>
+                    <p className="settings-help-text">{t('notif_templates_tokens')}</p>
+
+                    {NOTIFICATION_TEMPLATE_CATEGORIES.map((category) => (
+                      <div key={category} className="settings-template-card">
+                        <div className="settings-template-card-title">{t(`notif_${category}`)}</div>
+                        <div className="settings-template-field-label">{t('notif_title_label')}</div>
+                        <input
+                          className="input-field"
+                          value={notificationTemplates[category].title}
+                          onChange={(event) => updateNotificationTemplate(category, 'title', event.target.value)}
+                          placeholder="{defaultTitle}"
+                        />
+                        <div className="settings-template-field-label">{t('notif_body_label')}</div>
+                        <textarea
+                          className="textarea-field settings-template-textarea"
+                          rows={3}
+                          value={notificationTemplates[category].body}
+                          onChange={(event) => updateNotificationTemplate(category, 'body', event.target.value)}
+                          placeholder="{description}"
+                        />
+                      </div>
+                    ))}
+
+                    <div className="settings-template-actions">
+                      <button
+                        className="settings-retry-button"
+                        style={{ borderColor: primaryColor, color: primaryColor }}
+                        onClick={handleSaveNotificationTemplates}
+                        disabled={savingNotificationTemplates}
+                      >
+                        <Bell size={14} color={primaryColor} />
+                        {savingNotificationTemplates ? '...' : t('save_changes')}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>

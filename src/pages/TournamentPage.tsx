@@ -28,7 +28,7 @@ import { db } from '../services/firebaseConfig';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from '../context/LanguageContext';
-import { sendCategorizedPushNotification } from '../services/PushService';
+import { sendCategorizedPushNotification, sendConfiguredPushNotification } from '../services/PushService';
 import './Tournament.css';
 
 const TOURNAMENT_DOC = 'currentTournament';
@@ -340,11 +340,16 @@ export default function TournamentPage() {
       window.alert(`Solicitud Enviada\n\nSe ha notificado a ${partner?.nombreApellidos} para que acepte la pareja.`);
 
       if (partner?.id) {
-        await sendCategorizedPushNotification(
+        const inviteBody = `${user?.nombreApellidos?.split(' ')[0]} te ha invitado a jugar el torneo como su pareja.`;
+        await sendConfiguredPushNotification(
           [partner.id],
-          '¡Nueva Invitación al Torneo!',
-          `${user?.nombreApellidos?.split(' ')[0]} te ha invitado a jugar el torneo como su pareja.`,
           'invitations',
+          '¡Nueva Invitación al Torneo!',
+          inviteBody,
+          {
+            actorName: user?.nombreApellidos?.split(' ')[0],
+            targetName: partner?.nombreApellidos,
+          },
         );
       }
     } catch (error: any) {

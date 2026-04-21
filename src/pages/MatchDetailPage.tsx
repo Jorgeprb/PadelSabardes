@@ -5,7 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../services/firebaseConfig';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { sendCategorizedPushNotification } from '../services/PushService';
+import { sendConfiguredPushNotification } from '../services/PushService';
 import './MatchDetail.css';
 
 export default function MatchDetailPage() {
@@ -69,20 +69,38 @@ export default function MatchDetailPage() {
 
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayUnion(user.uid) });
     const others = getAudienceForMatchUpdates(user.uid);
-    await sendCategorizedPushNotification(others, 'PADEL Sabardes', `${user.nombreApellidos} se ha unido al partido del ${match.fecha}.`, 'joins');
+    const body = `${user.nombreApellidos} se ha unido al partido del ${match.fecha}.`;
+    await sendConfiguredPushNotification(others, 'joins', 'PADEL Sabardes', body, {
+      actorName: user.nombreApellidos,
+      matchDate: match.fecha,
+      matchTime: match.hora,
+      location: match.ubicacion,
+    });
   };
 
   const handleLeave = async () => {
     if (!match || !user || !matchId) return;
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayRemove(user.uid) });
     const others = getAudienceForMatchUpdates(user.uid);
-    await sendCategorizedPushNotification(others, 'PADEL Sabardes', `${user.nombreApellidos} se ha dado de baja del partido del ${match.fecha}.`, 'leaves');
+    const body = `${user.nombreApellidos} se ha dado de baja del partido del ${match.fecha}.`;
+    await sendConfiguredPushNotification(others, 'leaves', 'PADEL Sabardes', body, {
+      actorName: user.nombreApellidos,
+      matchDate: match.fecha,
+      matchTime: match.hora,
+      location: match.ubicacion,
+    });
   };
 
   const executeKick = async () => {
     if (!match || !kickTarget || !matchId) return;
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayRemove(kickTarget.uid) });
-    await sendCategorizedPushNotification([kickTarget.uid], 'PADEL Sabardes', `El administrador te ha expulsado del partido del ${match.fecha}.`, 'leaves');
+    const body = `El administrador te ha expulsado del partido del ${match.fecha}.`;
+    await sendConfiguredPushNotification([kickTarget.uid], 'leaves', 'PADEL Sabardes', body, {
+      targetName: kickTarget.nombreApellidos,
+      matchDate: match.fecha,
+      matchTime: match.hora,
+      location: match.ubicacion,
+    });
     setKickTarget(null);
   };
 
@@ -90,7 +108,12 @@ export default function MatchDetailPage() {
     if (!matchId || !(user?.role === 'admin' || match?.creadorId === user?.uid)) return;
     const others = (match?.listaParticipantes || []).filter((id: string) => id !== user?.uid);
     await deleteDoc(doc(db, 'matches', matchId));
-    await sendCategorizedPushNotification(others, 'Partido Cancelado', `El partido del ${match?.fecha} ha sido cancelado.`, 'cancellations');
+    const body = `El partido del ${match?.fecha} ha sido cancelado.`;
+    await sendConfiguredPushNotification(others, 'cancellations', 'Partido Cancelado', body, {
+      matchDate: match?.fecha,
+      matchTime: match?.hora,
+      location: match?.ubicacion,
+    });
     setShowDeleteModal(false);
     navigate(-1);
   };
@@ -108,7 +131,13 @@ export default function MatchDetailPage() {
     setAdminUserModalVisible(false);
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayUnion(entry.uid) });
     const others = getAudienceForMatchUpdates(entry.uid);
-    await sendCategorizedPushNotification(others, 'PADEL Sabardes', `El admin ha anadido a ${entry.nombreApellidos} al partido del ${match.fecha}.`, 'joins');
+    const body = `El admin ha anadido a ${entry.nombreApellidos} al partido del ${match.fecha}.`;
+    await sendConfiguredPushNotification(others, 'joins', 'PADEL Sabardes', body, {
+      targetName: entry.nombreApellidos,
+      matchDate: match.fecha,
+      matchTime: match.hora,
+      location: match.ubicacion,
+    });
   };
 
   if (loading || !match) {

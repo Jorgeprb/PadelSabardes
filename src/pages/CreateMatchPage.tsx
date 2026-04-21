@@ -9,7 +9,7 @@ import { useTranslation } from '../context/LanguageContext';
 import WeatherIcon from '../components/WeatherIcon';
 import { useCourtWeather } from '../hooks/useCourtWeather';
 import { getHourlyFocusIndex, getWeatherForIsoDate } from '../services/weather';
-import { sendCategorizedPushNotification } from '../services/PushService';
+import { sendConfiguredPushNotification } from '../services/PushService';
 import './CreateMatch.css';
 
 const dayNames = {
@@ -266,18 +266,30 @@ export default function CreateMatchPage() {
       if (user?.uid) usersToNotify.delete(user.uid);
 
       if (matchId) {
-        await sendCategorizedPushNotification(
+        const changeBody = `O partido do ${finalFecha} ás ${finalHora} actualizouse.`;
+        await sendConfiguredPushNotification(
           Array.from(usersToNotify),
-          'Cambios en tu partido',
-          `El partido del ${finalFecha} a las ${finalHora} ha sido actualizado.`,
           'changes',
+          'Cambios no teu partido',
+          changeBody,
+          {
+            matchDate: finalFecha,
+            matchTime: finalHora,
+            location: 'Sabardes',
+          },
         );
       } else {
-        await sendCategorizedPushNotification(
+        const inviteBody = `Podes xogar o ${finalFecha} ás ${finalHora}.`;
+        await sendConfiguredPushNotification(
           Array.from(usersToNotify),
-          '🎾 ¡Nuevo Partido Disponible!',
-          `Has sido invitado a jugar el ${finalFecha} a las ${finalHora}.`,
           'invitations',
+          '🎾 ¡Nova Changa!',
+          inviteBody,
+          {
+            matchDate: finalFecha,
+            matchTime: finalHora,
+            location: 'Sabardes',
+          },
         );
       }
 
