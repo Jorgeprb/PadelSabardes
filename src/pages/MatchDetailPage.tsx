@@ -1,12 +1,20 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { arrayRemove, arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, updateDoc } from 'firebase/firestore';
-import { ArrowLeft, Pencil, Plus, Trash2, Trophy, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../services/firebaseConfig';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from '../context/LanguageContext';
 import AvatarPreviewModal from '../components/AvatarPreviewModal';
+import WeatherIcon from '../components/WeatherIcon';
+import { useCourtWeather } from '../hooks/useCourtWeather';
+import { getHourlyFocusIndex, getWeatherForIsoDate, resolveMatchDateToIso } from '../services/weather';
+import zeroPlayersCourt from '../assets/0_jugadores.png';
+import onePlayerCourt from '../assets/1_jugadores.png';
+import twoPlayersCourt from '../assets/2_jugadores.png';
+import threePlayersCourt from '../assets/3_jugadores.png';
+import fourPlayersCourt from '../assets/4_jugadores.png';
 import { sendConfiguredPushNotification } from '../services/PushService';
 import './MatchDetail.css';
 
@@ -55,6 +63,7 @@ export default function MatchDetailPage() {
   const { user } = useAuth();
   const { primaryColor, colors } = useTheme();
   const { t, language } = useTranslation();
+  const { forecast } = useCourtWeather();
 
   const [match, setMatch] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -193,7 +202,6 @@ export default function MatchDetailPage() {
   const max = match?.plazas || 4;
   const half = Math.ceil(max / 2);
   const occupiedSpots = match?.listaParticipantes?.length || 0;
-  const availableSpots = Math.max(0, max - occupiedSpots);
   const verboseDate = match
     ? (() => {
         const date = parseMatchDateTime(match.fecha, match.hora);
@@ -201,12 +209,22 @@ export default function MatchDetailPage() {
       })()
     : '';
   const teamLabels = language === 'gl'
-    ? { a: 'Parella A', b: 'Parella B', tap: 'Tocar', versus: 'contra', spots: 'Prazas' }
-    : { a: 'Equipo A', b: 'Equipo B', tap: 'Tocar', versus: 'contra', spots: 'Plazas' };
-  const matchKindLabel = isTournament ? 'TORNEO · SABARDES' : 'PÁDEL · SABARDES';
-  const occupancyLabel = availableSpots === 0
-    ? (language === 'gl' ? 'Sen prazas libres' : 'Sin plazas libres')
-    : `${availableSpots} ${t('free_spots').toLowerCase()}`;
+    ? { a: 'Parella A', b: 'Parella B', tap: 'Tocar', versus: 'contra' }
+    : { a: 'Equipo A', b: 'Equipo B', tap: 'Tocar', versus: 'contra' };
+  const locationTitle = (match?.ubicacion || 'Pádel - Sabardes');
+  const matchWeather = match ? getWeatherForIsoDate(forecast, resolveMatchDateToIso(match.fecha)) : { daily: null, hourly: [] };
+  const highlightedWeather = match
+    ? (matchWeather.hourly.length > 0
+        ? matchWeather.hourly[getHourlyFocusIndex(matchWeather.hourly, match.hora)] || null
+        : matchWeather.daily)
+    : null;
+  const weatherTemperature = highlightedWeather
+    ? ('temperature' in highlightedWeather ? highlightedWeather.temperature : highlightedWeather.tempMax)
+    : null;
+  const weatherLabel = highlightedWeather ? t(highlightedWeather.labelKey) : '';
+  const weatherIsDay = highlightedWeather && 'isDay' in highlightedWeather ? highlightedWeather.isDay : true;
+  const playerSceneImages = [zeroPlayersCourt, onePlayerCourt, twoPlayersCourt, threePlayersCourt, fourPlayersCourt];
+  const playerSceneImage = playerSceneImages[Math.max(0, Math.min(occupiedSpots, playerSceneImages.length - 1))];
 
   if (loading || !match) {
     return <div className="centered-loader"><div className="spinner" style={{ borderTopColor: primaryColor }}></div></div>;
@@ -287,52 +305,40 @@ export default function MatchDetailPage() {
         </div>
 
         <div className="detail-hero-card">
-          <div className="detail-scene-shadow"></div>
-          <div className="detail-scene-platform"></div>
-          <div className="detail-scene-court">
-            <span className="detail-scene-corner detail-scene-corner-a"></span>
-            <span className="detail-scene-corner detail-scene-corner-b"></span>
-            <span className="detail-scene-corner detail-scene-corner-c"></span>
-            <span className="detail-scene-corner detail-scene-corner-d"></span>
-            <span className="detail-scene-line detail-scene-line-h"></span>
-            <span className="detail-scene-line detail-scene-line-v"></span>
-            <span className="detail-scene-line detail-scene-line-mid"></span>
-            <span className="detail-scene-net"></span>
-            <span className="detail-scene-player detail-scene-player-1"></span>
-            <span className="detail-scene-player detail-scene-player-2"></span>
-            <span className="detail-scene-player detail-scene-player-3"></span>
-            <span className="detail-scene-player detail-scene-player-4"></span>
-            <span className="detail-scene-ball"></span>
+          <div className="detail-hero-art">
+            <img src={playerSceneImage} alt="" className="detail-hero-image" />
           </div>
         </div>
       </div>
 
       <div className="detail-scroll scroll-area">
         <div className="detail-main-card card">
-          <div className="detail-main-card-header">
+          <div className="detail-main-card-header detail-main-card-header-compact">
             <div className="detail-main-card-copy">
               <span className="detail-info-label">{t('location')}</span>
-              <div className="detail-main-title-row">
-                {isTournament ? <Trophy size={22} color="#D4A017" /> : <span className="detail-ball-icon">●</span>}
-                <div className="detail-main-title">{matchKindLabel}</div>
-              </div>
+              <div className="detail-main-title">{locationTitle}</div>
               <div className="detail-main-subtitle">{verboseDate}</div>
             </div>
-            <div className="detail-summary-side">
-              <div className="detail-summary-chip">
-                <span className="detail-summary-chip-value">{occupiedSpots}/{max}</span>
-                <span className="detail-summary-chip-label">{teamLabels.spots}</span>
-              </div>
-              <div className="detail-summary-caption">{occupancyLabel}</div>
-            </div>
-          </div>
-          <div className="detail-info-grid">
-            <div className="detail-info-block">
-              <span className="detail-info-value">{match.ubicacion}</span>
-            </div>
-            <div className="detail-info-block detail-info-block-end">
-              <span className="detail-info-label">{t('date')} · {t('time')}</span>
-              <span className="detail-info-value">{match.fecha} · {match.hora}</span>
+
+            <div className="detail-weather-panel" aria-hidden={!highlightedWeather}>
+              {highlightedWeather ? (
+                <>
+                  <WeatherIcon
+                    kind={highlightedWeather.visualKind}
+                    isDay={weatherIsDay}
+                    size={24}
+                    color={accentColor}
+                  />
+                  <div className="detail-weather-copy">
+                    <span className="detail-weather-temp">{weatherTemperature !== null ? `${weatherTemperature}°C` : '--°C'}</span>
+                    <span className="detail-weather-label">{weatherLabel}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="detail-weather-copy">
+                  <span className="detail-weather-temp">--°C</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
