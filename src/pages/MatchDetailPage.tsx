@@ -357,7 +357,9 @@ export default function MatchDetailPage() {
           )}
         </div>
 
-        <div className="detail-hero-background" aria-hidden="true"></div>
+        <div className="detail-hero-background" aria-hidden="true">
+          <div className="detail-hero-scene"></div>
+        </div>
       </div>
 
       <div className="detail-scroll">

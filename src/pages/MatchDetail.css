@@ -12,14 +12,12 @@
   min-height: 100%;
   height: 100%;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(var(--detail-accent-rgb), 0.12), transparent 30%),
-    linear-gradient(180deg, #020305 0%, #05070d 18%, #09101c 52%, var(--bg-color) 100%);
+  background: var(--bg-color);
 }
 
 .detail-hero {
   position: relative;
-  padding: calc(10px + var(--safe-area-top)) 18px 4px;
+  padding: calc(10px + var(--safe-area-top)) 18px 8px;
 }
 
 .detail-top-nav {
@@ -61,37 +59,13 @@
 
 .detail-hero-background {
   position: relative;
-  margin-top: -6px;
-  height: 168px;
+  margin-top: -4px;
+  height: 182px;
   border-radius: 0;
   background:
-    radial-gradient(circle at 50% 58%, rgba(var(--detail-accent-rgb), 0.18), transparent 34%),
-    radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.03), transparent 24%),
-    linear-gradient(180deg, rgba(2, 3, 5, 0.98) 0%, rgba(5, 7, 13, 0.96) 26%, rgba(8, 13, 24, 0.94) 68%, rgba(9, 16, 28, 0) 100%),
-    var(--detail-hero-slot-bottom-right),
-    var(--detail-hero-slot-bottom-left),
-    var(--detail-hero-slot-top-right),
-    var(--detail-hero-slot-top-left),
-    var(--detail-hero-base);
-  background-repeat: no-repeat;
-  background-position:
-    center 58%,
-    center 18%,
-    center,
-    center bottom -6px,
-    center bottom -6px,
-    center bottom -6px,
-    center bottom -6px,
-    center bottom -6px;
-  background-size:
-    100% 100%,
-    100% 100%,
-    100% 100%,
-    min(340px, calc(100% - 18px)) auto,
-    min(340px, calc(100% - 18px)) auto,
-    min(340px, calc(100% - 18px)) auto,
-    min(340px, calc(100% - 18px)) auto,
-    min(340px, calc(100% - 18px)) auto;
+    radial-gradient(circle at 50% 74%, rgba(var(--detail-accent-rgb), 0.14), transparent 30%),
+    linear-gradient(180deg, #010203 0%, #03050a 18%, #08111d 62%, rgba(8, 17, 29, 0) 100%);
+  isolation: isolate;
   pointer-events: none;
 }
 
@@ -105,15 +79,44 @@
 
 .detail-hero-background::before {
   background:
-    linear-gradient(90deg, rgba(2, 3, 5, 1) 0%, rgba(2, 3, 5, 0.84) 9%, rgba(2, 3, 5, 0.18) 24%, rgba(2, 3, 5, 0.18) 76%, rgba(2, 3, 5, 0.84) 91%, rgba(2, 3, 5, 1) 100%),
-    linear-gradient(180deg, rgba(2, 3, 5, 0.96) 0%, rgba(2, 3, 5, 0.3) 22%, rgba(2, 3, 5, 0) 48%, rgba(5, 9, 18, 0.36) 78%, rgba(8, 15, 26, 0.88) 100%);
+    linear-gradient(90deg, rgba(1, 2, 3, 0.98) 0%, rgba(1, 2, 3, 0.68) 10%, rgba(1, 2, 3, 0.1) 24%, rgba(1, 2, 3, 0.1) 76%, rgba(1, 2, 3, 0.68) 90%, rgba(1, 2, 3, 0.98) 100%),
+    linear-gradient(180deg, rgba(1, 2, 3, 0.94) 0%, rgba(1, 2, 3, 0.28) 20%, rgba(1, 2, 3, 0) 46%, rgba(4, 9, 17, 0.26) 74%, rgba(8, 15, 26, 0.8) 100%);
+  z-index: 0;
 }
 
 .detail-hero-background::after {
   background:
-    radial-gradient(circle at 50% 74%, rgba(0, 0, 0, 0.48), transparent 34%),
-    radial-gradient(circle at 50% 64%, rgba(var(--detail-accent-rgb), 0.12), transparent 28%);
-  mix-blend-mode: screen;
+    radial-gradient(circle at 50% 80%, rgba(0, 0, 0, 0.54), transparent 36%),
+    radial-gradient(circle at 50% 68%, rgba(var(--detail-accent-rgb), 0.08), transparent 30%);
+  z-index: 1;
+}
+
+.detail-hero-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background:
+    var(--detail-hero-slot-bottom-right),
+    var(--detail-hero-slot-bottom-left),
+    var(--detail-hero-slot-top-right),
+    var(--detail-hero-slot-top-left),
+    var(--detail-hero-base);
+  background-repeat: no-repeat;
+  background-position:
+    center bottom -8px,
+    center bottom -8px,
+    center bottom -8px,
+    center bottom -8px,
+    center bottom -8px;
+  background-size:
+    min(348px, calc(100% - 12px)) auto,
+    min(348px, calc(100% - 12px)) auto,
+    min(348px, calc(100% - 12px)) auto,
+    min(348px, calc(100% - 12px)) auto,
+    min(348px, calc(100% - 12px)) auto;
+  filter:
+    drop-shadow(0 24px 24px rgba(0, 0, 0, 0.44))
+    drop-shadow(0 0 16px rgba(var(--detail-accent-rgb), 0.1));
 }
 
 .detail-scroll {
@@ -121,7 +124,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 0;
+  margin-top: 6px;
   padding: 0 16px calc(10px + var(--safe-area-bottom));
   overflow: hidden;
 }
@@ -545,17 +548,17 @@
 
 @media (max-width: 560px) {
   .detail-hero-background {
-    height: 150px;
-    margin-top: -10px;
+    height: 160px;
+    margin-top: -8px;
+  }
+
+  .detail-hero-scene {
     background-size:
-      100% 100%,
-      100% 100%,
-      100% 100%,
-      min(300px, calc(100% - 20px)) auto,
-      min(300px, calc(100% - 20px)) auto,
-      min(300px, calc(100% - 20px)) auto,
-      min(300px, calc(100% - 20px)) auto,
-      min(300px, calc(100% - 20px)) auto;
+      min(308px, calc(100% - 12px)) auto,
+      min(308px, calc(100% - 12px)) auto,
+      min(308px, calc(100% - 12px)) auto,
+      min(308px, calc(100% - 12px)) auto,
+      min(308px, calc(100% - 12px)) auto;
   }
 
   .detail-main-card {
