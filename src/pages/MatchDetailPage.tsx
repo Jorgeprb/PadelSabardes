@@ -198,6 +198,7 @@ export default function MatchDetailPage() {
   const detailPageStyle = {
     '--detail-accent': accentColor,
     '--detail-accent-rgb': accentRgb,
+    '--detail-hero-image': `url(${playerSceneImage})`,
   } as CSSProperties;
   const max = match?.plazas || 4;
   const half = Math.ceil(max / 2);
@@ -304,14 +305,10 @@ export default function MatchDetailPage() {
           )}
         </div>
 
-        <div className="detail-hero-card">
-          <div className="detail-hero-art">
-            <img src={playerSceneImage} alt="" className="detail-hero-image" />
-          </div>
-        </div>
+        <div className="detail-hero-background" aria-hidden="true"></div>
       </div>
 
-      <div className="detail-scroll scroll-area">
+      <div className="detail-scroll">
         <div className="detail-main-card card">
           <div className="detail-main-card-header detail-main-card-header-compact">
             <div className="detail-main-card-copy">

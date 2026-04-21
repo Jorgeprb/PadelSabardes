@@ -1,18 +1,21 @@
 .detail-page {
   --detail-accent: #0ea5e9;
   --detail-accent-rgb: 14, 165, 233;
+  --detail-hero-image: none;
+  position: relative;
   display: flex;
   flex-direction: column;
+  min-height: 100%;
   height: 100%;
+  overflow: hidden;
   background:
-    radial-gradient(circle at top, rgba(var(--detail-accent-rgb), 0.18), transparent 34%),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.2), transparent 32%),
-    var(--bg-color);
+    radial-gradient(circle at 50% 0%, rgba(var(--detail-accent-rgb), 0.12), transparent 30%),
+    linear-gradient(180deg, #020305 0%, #05070d 18%, #09101c 52%, var(--bg-color) 100%);
 }
 
 .detail-hero {
   position: relative;
-  padding: calc(12px + var(--safe-area-top)) 18px 0;
+  padding: calc(10px + var(--safe-area-top)) 18px 4px;
 }
 
 .detail-top-nav {
@@ -52,87 +55,59 @@
   background: linear-gradient(180deg, rgba(248, 113, 113, 0.96), rgba(239, 68, 68, 0.9));
 }
 
-.detail-hero-card {
+.detail-hero-background {
   position: relative;
-  margin-top: 14px;
-  min-height: 196px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 28px;
+  margin-top: -6px;
+  height: 168px;
+  border-radius: 0;
   background:
-    radial-gradient(circle at 50% 12%, rgba(var(--detail-accent-rgb), 0.12), transparent 38%),
-    linear-gradient(180deg, rgba(10, 12, 29, 0.98), rgba(0, 1, 2, 0.98));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 18px 34px rgba(2, 6, 23, 0.22);
-  overflow: hidden;
-}
-
-.detail-hero-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 18% 18%, rgba(var(--detail-accent-rgb), 0.14), transparent 24%),
-    radial-gradient(circle at 84% 74%, rgba(255, 255, 255, 0.08), transparent 20%);
+    radial-gradient(circle at 50% 58%, rgba(var(--detail-accent-rgb), 0.18), transparent 34%),
+    radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.03), transparent 24%),
+    linear-gradient(180deg, rgba(2, 3, 5, 0.98) 0%, rgba(5, 7, 13, 0.96) 26%, rgba(8, 13, 24, 0.94) 68%, rgba(9, 16, 28, 0) 100%),
+    var(--detail-hero-image);
+  background-repeat: no-repeat;
+  background-position:
+    center 58%,
+    center 18%,
+    center,
+    center bottom -6px;
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    min(340px, calc(100% - 18px)) auto;
   pointer-events: none;
 }
 
-.detail-hero-art {
-  position: relative;
-  z-index: 1;
-  height: 100%;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 6px 12px 0;
-  isolation: isolate;
-}
-
-.detail-hero-art::before {
+.detail-hero-background::before,
+.detail-hero-background::after {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: 2;
   pointer-events: none;
+}
+
+.detail-hero-background::before {
   background:
-    linear-gradient(90deg, rgba(14, 23, 43, 0.96) 0%, rgba(14, 23, 43, 0.2) 14%, rgba(14, 23, 43, 0) 24%, rgba(14, 23, 43, 0) 76%, rgba(14, 23, 43, 0.2) 86%, rgba(14, 23, 43, 0.96) 100%),
-    linear-gradient(180deg, rgba(14, 23, 43, 0.78) 0%, rgba(14, 23, 43, 0.08) 18%, rgba(14, 23, 43, 0) 44%, rgba(14, 23, 43, 0.08) 78%, rgba(14, 23, 43, 0.82) 100%);
+    linear-gradient(90deg, rgba(2, 3, 5, 1) 0%, rgba(2, 3, 5, 0.84) 9%, rgba(2, 3, 5, 0.18) 24%, rgba(2, 3, 5, 0.18) 76%, rgba(2, 3, 5, 0.84) 91%, rgba(2, 3, 5, 1) 100%),
+    linear-gradient(180deg, rgba(2, 3, 5, 0.96) 0%, rgba(2, 3, 5, 0.3) 22%, rgba(2, 3, 5, 0) 48%, rgba(5, 9, 18, 0.36) 78%, rgba(8, 15, 26, 0.88) 100%);
 }
 
-.detail-hero-art::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: 18px;
-  width: 62%;
-  height: 26px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background: rgba(2, 6, 23, 0.54);
-  filter: blur(14px);
-  z-index: -1;
-}
-
-.detail-hero-image {
-  position: relative;
-  z-index: 1;
-  width: min(100%, 338px);
-  height: auto;
-  display: block;
-  object-fit: contain;
-  transform: translateY(8px);
+.detail-hero-background::after {
+  background:
+    radial-gradient(circle at 50% 74%, rgba(0, 0, 0, 0.48), transparent 34%),
+    radial-gradient(circle at 50% 64%, rgba(var(--detail-accent-rgb), 0.12), transparent 28%);
   mix-blend-mode: screen;
-  opacity: 0.97;
-  -webkit-mask-image: radial-gradient(circle at center, #000 58%, rgba(0, 0, 0, 0.9) 74%, rgba(0, 0, 0, 0.45) 88%, transparent 100%);
-  mask-image: radial-gradient(circle at center, #000 58%, rgba(0, 0, 0, 0.9) 74%, rgba(0, 0, 0, 0.45) 88%, transparent 100%);
-  filter:
-    drop-shadow(0 20px 24px rgba(2, 6, 23, 0.48))
-    drop-shadow(0 0 30px rgba(var(--detail-accent-rgb), 0.08));
 }
 
 .detail-scroll {
-  margin-top: 10px;
-  padding: 0 16px 34px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 0;
+  padding: 0 16px calc(10px + var(--safe-area-bottom));
+  overflow: hidden;
 }
 
 .detail-main-card,
@@ -150,8 +125,9 @@
 .detail-main-card {
   position: relative;
   z-index: 2;
-  margin-bottom: 14px;
-  padding: 16px 18px;
+  margin-bottom: 0;
+  padding: 14px 18px;
+  flex-shrink: 0;
 }
 
 .detail-main-card-header {
@@ -236,7 +212,9 @@
 
 .detail-players-card {
   position: relative;
-  padding: 18px 18px 20px;
+  flex: 1;
+  min-height: 0;
+  padding: 16px 18px 14px;
   overflow: hidden;
 }
 
@@ -254,7 +232,7 @@
 .detail-section-title {
   position: relative;
   z-index: 1;
-  margin: 0 0 16px;
+  margin: 0 0 12px;
   text-align: center;
   color: var(--text-primary);
   font-size: calc(19px * var(--font-scale));
@@ -265,8 +243,9 @@
 
 .detail-board-shell {
   position: relative;
-  min-height: 360px;
-  padding: 4px 28px 0;
+  min-height: 292px;
+  height: 100%;
+  padding: 0 28px;
 }
 
 .detail-board-team-tag {
@@ -297,27 +276,52 @@
 .detail-board-grid {
   position: relative;
   z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 38px 24px;
-  padding: 10px 12px;
+  height: 100%;
+  min-height: 100%;
 }
 
 .detail-board-cell {
+  position: absolute;
+  width: 116px;
   display: flex;
   justify-content: center;
+}
+
+.detail-board-cell-1,
+.detail-board-cell-2,
+.detail-board-cell-3,
+.detail-board-cell-4 {
+  left: 50%;
+  top: 50%;
+}
+
+.detail-board-cell-1 {
+  transform: translate(calc(-100% - 34px), calc(-100% - 28px));
+}
+
+.detail-board-cell-2 {
+  transform: translate(34px, calc(-100% - 28px));
+}
+
+.detail-board-cell-3 {
+  transform: translate(calc(-100% - 34px), 8px);
+}
+
+.detail-board-cell-4 {
+  transform: translate(34px, 8px);
 }
 
 .detail-board-versus {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   pointer-events: none;
 }
 
 .detail-board-versus-ring {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 10px);
+  transform: translate(-50%, -50%);
   width: 116px;
   height: 116px;
   border-radius: 999px;
@@ -331,7 +335,6 @@
   box-shadow:
     0 18px 34px rgba(var(--detail-accent-rgb), 0.14),
     inset 0 0 0 6px rgba(15, 23, 42, 0.18);
-  position: relative;
 }
 
 .detail-board-versus-ring::before {
@@ -525,17 +528,18 @@
 }
 
 @media (max-width: 560px) {
-  .detail-hero-card {
-    min-height: 176px;
-    border-radius: 24px;
-  }
-
-  .detail-hero-image {
-    width: min(100%, 302px);
+  .detail-hero-background {
+    height: 150px;
+    margin-top: -10px;
+    background-size:
+      100% 100%,
+      100% 100%,
+      100% 100%,
+      min(300px, calc(100% - 20px)) auto;
   }
 
   .detail-main-card {
-    padding: 14px 16px;
+    padding: 13px 16px;
   }
 
   .detail-main-card-header {
@@ -549,8 +553,8 @@
   }
 
   .detail-board-shell {
-    min-height: 332px;
-    padding: 10px 20px 0;
+    min-height: 272px;
+    padding: 0 20px;
   }
 
   .detail-board-team-tag {
@@ -566,12 +570,28 @@
     right: -2px;
   }
 
-  .detail-board-grid {
-    gap: 28px 18px;
-    padding: 10px 0;
+  .detail-board-cell {
+    width: 100px;
+  }
+
+  .detail-board-cell-1 {
+    transform: translate(calc(-100% - 26px), calc(-100% - 24px));
+  }
+
+  .detail-board-cell-2 {
+    transform: translate(26px, calc(-100% - 24px));
+  }
+
+  .detail-board-cell-3 {
+    transform: translate(calc(-100% - 26px), 2px);
+  }
+
+  .detail-board-cell-4 {
+    transform: translate(26px, 2px);
   }
 
   .detail-board-versus-ring {
+    top: calc(50% - 12px);
     width: 94px;
     height: 94px;
   }
