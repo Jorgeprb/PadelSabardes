@@ -55,7 +55,7 @@
 .detail-hero-card {
   position: relative;
   margin-top: 14px;
-  min-height: 220px;
+  min-height: 196px;
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 28px;
   background:
@@ -84,7 +84,19 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding: 10px 10px 0;
+  padding: 6px 12px 0;
+  isolation: isolate;
+}
+
+.detail-hero-art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(14, 23, 43, 0.96) 0%, rgba(14, 23, 43, 0.2) 14%, rgba(14, 23, 43, 0) 24%, rgba(14, 23, 43, 0) 76%, rgba(14, 23, 43, 0.2) 86%, rgba(14, 23, 43, 0.96) 100%),
+    linear-gradient(180deg, rgba(14, 23, 43, 0.78) 0%, rgba(14, 23, 43, 0.08) 18%, rgba(14, 23, 43, 0) 44%, rgba(14, 23, 43, 0.08) 78%, rgba(14, 23, 43, 0.82) 100%);
 }
 
 .detail-hero-art::after {
@@ -102,18 +114,24 @@
 }
 
 .detail-hero-image {
-  width: min(100%, 370px);
+  position: relative;
+  z-index: 1;
+  width: min(100%, 338px);
   height: auto;
   display: block;
   object-fit: contain;
-  transform: translateY(10px);
+  transform: translateY(8px);
+  mix-blend-mode: screen;
+  opacity: 0.97;
+  -webkit-mask-image: radial-gradient(circle at center, #000 58%, rgba(0, 0, 0, 0.9) 74%, rgba(0, 0, 0, 0.45) 88%, transparent 100%);
+  mask-image: radial-gradient(circle at center, #000 58%, rgba(0, 0, 0, 0.9) 74%, rgba(0, 0, 0, 0.45) 88%, transparent 100%);
   filter:
     drop-shadow(0 20px 24px rgba(2, 6, 23, 0.48))
     drop-shadow(0 0 30px rgba(var(--detail-accent-rgb), 0.08));
 }
 
 .detail-scroll {
-  margin-top: -16px;
+  margin-top: 10px;
   padding: 0 16px 34px;
 }
 
@@ -508,12 +526,12 @@
 
 @media (max-width: 560px) {
   .detail-hero-card {
-    min-height: 196px;
+    min-height: 176px;
     border-radius: 24px;
   }
 
   .detail-hero-image {
-    width: min(100%, 320px);
+    width: min(100%, 302px);
   }
 
   .detail-main-card {
