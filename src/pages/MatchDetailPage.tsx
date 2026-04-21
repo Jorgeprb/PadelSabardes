@@ -242,8 +242,7 @@ export default function MatchDetailPage() {
   const isTournament = !!match?.isTournament;
   const accentColor = isTournament ? '#D4A017' : primaryColor;
   const accentRgb = hexToRgbString(accentColor);
-  const max = match?.plazas || 4;
-  const half = Math.ceil(max / 2);
+  const half = 2;
   const participantSlots = Array.from(
     { length: 4 },
     (_, index) => (((match?.listaParticipantes || []) as Array<string | null | undefined>)[index] ?? null),
@@ -264,8 +263,8 @@ export default function MatchDetailPage() {
       })()
     : '';
   const teamLabels = language === 'gl'
-    ? { a: 'Parella A', b: 'Parella B', tap: 'Tocar', versus: 'VS' }
-    : { a: 'Equipo A', b: 'Equipo B', tap: 'Tocar', versus: 'VS' };
+    ? { tap: 'Tocar', versus: 'VS' }
+    : { tap: 'Tocar', versus: 'VS' };
   const locationTitle = (match?.ubicacion || 'Pádel - Sabardes');
   const matchWeather = match ? getWeatherForIsoDate(forecast, resolveMatchDateToIso(match.fecha)) : { daily: null, hourly: [] };
   const highlightedWeather = match
@@ -397,9 +396,6 @@ export default function MatchDetailPage() {
         <div className="detail-players-card card">
           <div className="detail-section-title">{t('players')}</div>
           <div className="detail-board-shell">
-            <div className="detail-board-team-tag detail-board-team-tag-a">{teamLabels.a}</div>
-            <div className="detail-board-team-tag detail-board-team-tag-b">{teamLabels.b}</div>
-
             <div className="detail-board-grid">
               <div className="detail-board-cell detail-board-cell-1">{renderSlot(0)}</div>
               <div className="detail-board-cell detail-board-cell-2">{renderSlot(1)}</div>
