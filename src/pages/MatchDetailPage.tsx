@@ -209,8 +209,8 @@ export default function MatchDetailPage() {
       })()
     : '';
   const teamLabels = language === 'gl'
-    ? { a: 'Parella A', b: 'Parella B', tap: 'Tocar', versus: 'contra' }
-    : { a: 'Equipo A', b: 'Equipo B', tap: 'Tocar', versus: 'contra' };
+    ? { a: 'Parella A', b: 'Parella B', tap: 'Tocar', versus: 'VS' }
+    : { a: 'Equipo A', b: 'Equipo B', tap: 'Tocar', versus: 'VS' };
   const locationTitle = (match?.ubicacion || 'Pádel - Sabardes');
   const matchWeather = match ? getWeatherForIsoDate(forecast, resolveMatchDateToIso(match.fecha)) : { daily: null, hourly: [] };
   const highlightedWeather = match
