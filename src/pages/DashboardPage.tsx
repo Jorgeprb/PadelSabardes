@@ -6,6 +6,7 @@ import { db } from '../services/firebaseConfig';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from '../context/LanguageContext';
+import AvatarPreviewModal from '../components/AvatarPreviewModal';
 import WeatherIcon from '../components/WeatherIcon';
 import { useCourtWeather } from '../hooks/useCourtWeather';
 import { formatIsoDate, getHourlyFocusIndex, getHourlySliceAround, getWeatherForIsoDate, resolveMatchDateToIso } from '../services/weather';
@@ -58,6 +59,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [selectedDateFilter, setSelectedDateFilter] = useState(formatDDMM(new Date()));
   const [expandedWeather, setExpandedWeather] = useState<Record<string, boolean>>({});
+  const [avatarPreview, setAvatarPreview] = useState<{ imageUrl: string; alt: string } | null>(null);
 
   const weekDays = useMemo(() => Array.from({ length: 14 }).map((_, index) => {
     const day = new Date();
@@ -158,12 +160,21 @@ export default function DashboardPage() {
       return (
         <div className="matches-avatar-stack">
           {participant?.fotoURL ? (
-            <img
-              src={participant.fotoURL}
-              className="matches-avatar"
-              style={isMe ? { borderColor: accentColor, borderWidth: 2.5 } : undefined}
-              alt={shortName}
-            />
+            <button
+              type="button"
+              className="matches-avatar-button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setAvatarPreview({ imageUrl: participant.fotoURL, alt: participant.nombreApellidos || shortName });
+              }}
+            >
+              <img
+                src={participant.fotoURL}
+                className="matches-avatar"
+                style={isMe ? { borderColor: accentColor, borderWidth: 2.5 } : undefined}
+                alt={shortName}
+              />
+            </button>
           ) : (
             <div className="matches-avatar matches-avatar-placeholder" style={isMe ? { borderColor: accentColor, borderWidth: 2.5 } : undefined}>
               {participant?.nombreApellidos?.charAt(0)?.toUpperCase() || '?'}
@@ -368,6 +379,14 @@ export default function DashboardPage() {
         <button className="matches-fab" style={{ backgroundColor: primaryColor }} onClick={() => navigate(`/create-match?initialDateStr=${selectedDateFilter}`)}>
           <Plus size={30} color="#fff" />
         </button>
+      )}
+
+      {avatarPreview && (
+        <AvatarPreviewModal
+          imageUrl={avatarPreview.imageUrl}
+          alt={avatarPreview.alt}
+          onClose={() => setAvatarPreview(null)}
+        />
       )}
     </div>
   );

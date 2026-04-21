@@ -419,17 +419,6 @@ export default function SettingsPage() {
                 onToggle={toggleOpenMatchCreation}
               />
             </div>
-
-            <div className="section-label">{t('admin_options')}</div>
-            <div className="settings-section-card">
-              <ToggleRow
-                icon={<Trophy size={18} color={primaryColor} />}
-                label={t('auto_approve')}
-                desc={t('auto_approve_desc')}
-                value={autoApproveTournament}
-                onToggle={toggleAutoApproveTournament}
-              />
-            </div>
           </>
         )}
 
@@ -577,8 +566,17 @@ export default function SettingsPage() {
 
         {user?.role === 'admin' && (
           <>
-            <div className="section-label">{t('manage_tournament_slots')}</div>
+            <div className="section-label">{t('admin_options')}</div>
             <div className="settings-section-card">
+              <ToggleRow
+                icon={<Trophy size={18} color={primaryColor} />}
+                label={t('auto_approve')}
+                desc={t('auto_approve_desc')}
+                value={autoApproveTournament}
+                onToggle={toggleAutoApproveTournament}
+              />
+
+              <div className="settings-divider"></div>
               <div className="settings-sub-label">Partidos mínimos por equipo por semana</div>
               <div className="settings-mpw-row">
                 <button className="settings-stepper" onClick={() => saveMatchesPerWeek(matchesPerWeek - 1)}>-</button>
@@ -586,6 +584,9 @@ export default function SettingsPage() {
                 <button className="settings-stepper" onClick={() => saveMatchesPerWeek(matchesPerWeek + 1)}>+</button>
                 <div className="settings-mpw-note">partido{matchesPerWeek !== 1 ? 's' : ''} / equipo / semana (máx. 5)</div>
               </div>
+
+              <div className="settings-divider"></div>
+              <div className="settings-sub-label" style={{ marginTop: 12 }}>{t('manage_tournament_slots')}</div>
 
               {slots.map((slot) => (
                 <div key={slot.id} className="settings-slot-row">

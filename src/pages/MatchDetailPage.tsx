@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../services/firebaseConfig';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import AvatarPreviewModal from '../components/AvatarPreviewModal';
 import { sendConfiguredPushNotification } from '../services/PushService';
 import './MatchDetail.css';
 
@@ -21,6 +22,7 @@ export default function MatchDetailPage() {
   const [kickTarget, setKickTarget] = useState<any>(null);
   const [adminUserModalVisible, setAdminUserModalVisible] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [avatarPreview, setAvatarPreview] = useState<{ imageUrl: string; alt: string } | null>(null);
 
   useEffect(() => {
     if (!matchId) return undefined;
@@ -160,12 +162,22 @@ export default function MatchDetailPage() {
         <div className="detail-slot-player" key={`slot-${index}`}>
           <div className="detail-slot-avatar-wrap">
             {participant.fotoURL ? (
-              <img src={participant.fotoURL} className="detail-slot-avatar" alt={participant.nombreApellidos} />
+              <button
+                type="button"
+                className="detail-slot-avatar-button"
+                onClick={() => setAvatarPreview({ imageUrl: participant.fotoURL, alt: participant.nombreApellidos })}
+              >
+                <img src={participant.fotoURL} className="detail-slot-avatar" alt={participant.nombreApellidos} />
+              </button>
             ) : (
               <div className="detail-slot-avatar detail-slot-avatar-placeholder">{participant.nombreApellidos?.charAt(0)?.toUpperCase()}</div>
             )}
             {(isMe || user?.role === 'admin') && (
-              <button className="detail-leave-badge" onClick={() => (isMe ? handleLeave() : setKickTarget(participant))}>
+              <button className="detail-leave-badge" onClick={(event) => {
+                event.stopPropagation();
+                if (isMe) handleLeave();
+                else setKickTarget(participant);
+              }}>
                 <X size={14} color="#fff" />
               </button>
             )}
@@ -253,6 +265,14 @@ export default function MatchDetailPage() {
           </div>
         </div>
       </div>
+
+      {avatarPreview && (
+        <AvatarPreviewModal
+          imageUrl={avatarPreview.imageUrl}
+          alt={avatarPreview.alt}
+          onClose={() => setAvatarPreview(null)}
+        />
+      )}
 
       {showDeleteModal && (
         <div className="modal-overlay modal-center">

@@ -314,6 +314,15 @@
   flex-shrink: 0;
 }
 
+.tournament-avatar-button {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  cursor: zoom-in;
+}
+
 .tournament-match-avatar-overlap {
   margin-left: -10px;
 }

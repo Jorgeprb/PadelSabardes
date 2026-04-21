@@ -28,6 +28,7 @@ import { db } from '../services/firebaseConfig';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from '../context/LanguageContext';
+import AvatarPreviewModal from '../components/AvatarPreviewModal';
 import { sendCategorizedPushNotification, sendConfiguredPushNotification } from '../services/PushService';
 import './Tournament.css';
 
@@ -112,6 +113,7 @@ export default function TournamentPage() {
   const [startPhaseModalVisible, setStartPhaseModalVisible] = useState(false);
   const [startPhaseDate, setStartPhaseDate] = useState(() => new Date());
   const [adminMatchOptionsVisible, setAdminMatchOptionsVisible] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<{ imageUrl: string; alt: string } | null>(null);
 
   useEffect(() => {
     const unsubscribeTournament = onSnapshot(doc(db, 'tournament', TOURNAMENT_DOC), (snapshot) => {
@@ -1262,7 +1264,20 @@ export default function TournamentPage() {
   };
 
   const renderAvatar = (photo: string | null, name: string) => {
-    if (photo) return <img src={photo} alt={name} className="tournament-match-avatar" />;
+    if (photo) {
+      return (
+        <button
+          type="button"
+          className="tournament-avatar-button"
+          onClick={(event) => {
+            event.stopPropagation();
+            setAvatarPreview({ imageUrl: photo, alt: name });
+          }}
+        >
+          <img src={photo} alt={name} className="tournament-match-avatar" />
+        </button>
+      );
+    }
     return <div className="tournament-match-avatar tournament-match-avatar-placeholder">{name?.charAt(0) || '?'}</div>;
   };
 
@@ -1321,6 +1336,14 @@ export default function TournamentPage() {
       <div className="tournament-scroll scroll-area">
         {loading ? <div className="centered-loader"><div className="spinner" style={{ borderTopColor: primaryColor }}></div></div> : renderPhaseContent()}
       </div>
+
+      {avatarPreview && (
+        <AvatarPreviewModal
+          imageUrl={avatarPreview.imageUrl}
+          alt={avatarPreview.alt}
+          onClose={() => setAvatarPreview(null)}
+        />
+      )}
 
       {confirmModalConfig.visible && (
         <div className="modal-overlay modal-center" onClick={() => setConfirmModalConfig((previous) => ({ ...previous, visible: false }))}>
