@@ -131,7 +131,8 @@ export default function MatchDetailPage() {
   };
 
   const getAudienceForMatchUpdates = (excludedUid?: string, participantEntries?: Array<string | null | undefined>) => {
-    const recipients = new Set<string>((participantEntries || match?.listaParticipantes || []).filter((uid): uid is string => typeof uid === 'string' && uid.length > 0));
+    const sourceEntries = (participantEntries || match?.listaParticipantes || []) as Array<string | null | undefined>;
+    const recipients = new Set<string>(sourceEntries.filter((uid: string | null | undefined): uid is string => typeof uid === 'string' && uid.length > 0));
 
     if (match?.creadorId) {
       recipients.add(match.creadorId);
