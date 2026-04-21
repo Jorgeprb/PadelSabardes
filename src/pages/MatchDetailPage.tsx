@@ -46,6 +46,20 @@ export default function MatchDetailPage() {
     setLoading(false);
   };
 
+  const getAudienceForMatchUpdates = (excludedUid?: string) => {
+    const recipients = new Set<string>(match?.listaParticipantes || []);
+
+    if (match?.creadorId) {
+      recipients.add(match.creadorId);
+    }
+
+    if (excludedUid) {
+      recipients.delete(excludedUid);
+    }
+
+    return Array.from(recipients);
+  };
+
   const handleJoin = async () => {
     if (!match || !user || !matchId) return;
     if (match.listaParticipantes?.length >= match.plazas) {
@@ -54,14 +68,14 @@ export default function MatchDetailPage() {
     }
 
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayUnion(user.uid) });
-    const others = (match.listaParticipantes || []).filter((id: string) => id !== user.uid);
+    const others = getAudienceForMatchUpdates(user.uid);
     await sendCategorizedPushNotification(others, 'PADEL Sabardes', `${user.nombreApellidos} se ha unido al partido del ${match.fecha}.`, 'joins');
   };
 
   const handleLeave = async () => {
     if (!match || !user || !matchId) return;
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayRemove(user.uid) });
-    const others = (match.listaParticipantes || []).filter((id: string) => id !== user.uid);
+    const others = getAudienceForMatchUpdates(user.uid);
     await sendCategorizedPushNotification(others, 'PADEL Sabardes', `${user.nombreApellidos} se ha dado de baja del partido del ${match.fecha}.`, 'leaves');
   };
 
@@ -93,7 +107,7 @@ export default function MatchDetailPage() {
     if (!matchId || !match) return;
     setAdminUserModalVisible(false);
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayUnion(entry.uid) });
-    const others = (match.listaParticipantes || []).filter((id: string) => id !== entry.uid);
+    const others = getAudienceForMatchUpdates(entry.uid);
     await sendCategorizedPushNotification(others, 'PADEL Sabardes', `El admin ha anadido a ${entry.nombreApellidos} al partido del ${match.fecha}.`, 'joins');
   };
 
