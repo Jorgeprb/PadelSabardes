@@ -133,7 +133,7 @@ const translations = {
     match_updated: 'Partido Actualizado', court_busy: 'Pista Ocupada',
     court_busy_msg: 'Non se pode crear o partido. A pista dispon de bloques de 1h 30min e xa existe unha reserva que se solapa con este horario. Proba con outro horario.',
     no_groups: 'Ainda non creaches grupos.',
-    join: 'Unirse', leave: 'Sair', location: 'Localizacion',
+    join: 'Unirse', leave: 'Sair', location: 'Localización',
     delete_match: 'Borrar Partido', edit_match: 'Editar',
     delete_match_confirm: 'Borrar Partido?', delete_match_msg: 'Esta accion non se pode desfacer e as prazas desapareceran.',
     delete: 'Borrar', kick_player: 'Expulsar a', kick_msg: 'Tera que volver a unirse manualmente.',
