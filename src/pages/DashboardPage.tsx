@@ -138,13 +138,16 @@ export default function DashboardPage() {
     const isParticipant = item.listaParticipantes?.includes(user?.uid);
     const isTournament = !!item.isTournament;
     const accentColor = isTournament ? '#D4A017' : primaryColor;
-    const participants = (item.listaParticipantes || [])
-      .map((uid: string) => users.find((entry) => entry.id === uid))
-      .filter(Boolean);
-    const isFull = participants.length >= 4;
-    const freeSpots = 4 - participants.length;
-    const teamA = participants.slice(0, 2);
-    const teamB = participants.slice(2, 4);
+    const participantSlots = Array.from({ length: 4 }, (_, index) => {
+      const uid = item.listaParticipantes?.[index];
+      if (!uid) return null;
+      return users.find((entry) => entry.id === uid) || null;
+    });
+    const participantsCount = participantSlots.filter(Boolean).length;
+    const isFull = participantsCount >= 4;
+    const freeSpots = 4 - participantsCount;
+    const teamA = participantSlots.slice(0, 2);
+    const teamB = participantSlots.slice(2, 4);
     const weatherForMatch = getWeatherForIsoDate(forecast, resolveMatchDateToIso(item.fecha));
     const focusIndex = getHourlyFocusIndex(weatherForMatch.hourly, item.hora);
     const highlightedWeather = weatherForMatch.hourly[focusIndex] || weatherForMatch.daily;

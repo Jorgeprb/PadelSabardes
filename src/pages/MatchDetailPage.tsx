@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { arrayRemove, arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, updateDoc } from 'firebase/firestore';
 import { ArrowLeft, Pencil, Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../services/firebaseConfig';
@@ -57,6 +57,32 @@ const hexToRgbString = (value: string) => {
   return `${(numeric >> 16) & 255}, ${(numeric >> 8) & 255}, ${numeric & 255}`;
 };
 
+const trimTrailingEmptySlots = (entries: Array<string | null | undefined>) => {
+  const next = [...entries];
+  while (next.length > 0 && !next[next.length - 1]) {
+    next.pop();
+  }
+  return next;
+};
+
+const countFilledSlots = (entries: Array<string | null | undefined>) => entries.filter(Boolean).length;
+
+const buildParticipantsWithInsertedUser = (
+  entries: Array<string | null | undefined>,
+  slotIndex: number,
+  uid: string,
+) => {
+  const next = [...entries];
+  while (next.length <= slotIndex) {
+    next.push(null);
+  }
+  next[slotIndex] = uid;
+  return trimTrailingEmptySlots(next);
+};
+
+const clearParticipantSlot = (entries: Array<string | null | undefined>, uid: string) =>
+  trimTrailingEmptySlots(entries.map((entry) => (entry === uid ? null : entry)));
+
 export default function MatchDetailPage() {
   const { matchId } = useParams();
   const navigate = useNavigate();
@@ -71,6 +97,7 @@ export default function MatchDetailPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [kickTarget, setKickTarget] = useState<any>(null);
   const [adminUserModalVisible, setAdminUserModalVisible] = useState(false);
+  const [adminTargetSlot, setAdminTargetSlot] = useState<number | null>(null);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [avatarPreview, setAvatarPreview] = useState<{ imageUrl: string; alt: string } | null>(null);
 
@@ -86,20 +113,25 @@ export default function MatchDetailPage() {
     return () => unsubscribe();
   }, [matchId]);
 
-  const fetchParticipants = async (userIds: string[]) => {
-    if (userIds.length === 0) {
-      setParticipantsData([]);
+  const fetchParticipants = async (userIds: Array<string | null | undefined>) => {
+    const normalizedIds = userIds.slice(0, 4);
+    const validIds = Array.from(new Set(normalizedIds.filter((uid): uid is string => typeof uid === 'string' && uid.length > 0)));
+
+    if (validIds.length === 0) {
+      setParticipantsData(normalizedIds.map(() => null));
       setLoading(false);
       return;
     }
 
-    const docs = await Promise.all(userIds.map((uid) => getDoc(doc(db, 'users', uid))));
-    setParticipantsData(docs.map((entry) => ({ uid: entry.id, ...entry.data() })));
+    const docs = await Promise.all(validIds.map((uid) => getDoc(doc(db, 'users', uid))));
+    const usersById = new Map(docs.map((entry) => [entry.id, { uid: entry.id, ...entry.data() }]));
+
+    setParticipantsData(normalizedIds.map((uid) => (uid ? usersById.get(uid) || null : null)));
     setLoading(false);
   };
 
-  const getAudienceForMatchUpdates = (excludedUid?: string) => {
-    const recipients = new Set<string>(match?.listaParticipantes || []);
+  const getAudienceForMatchUpdates = (excludedUid?: string, participantEntries?: Array<string | null | undefined>) => {
+    const recipients = new Set<string>((participantEntries || match?.listaParticipantes || []).filter((uid): uid is string => typeof uid === 'string' && uid.length > 0));
 
     if (match?.creadorId) {
       recipients.add(match.creadorId);
@@ -112,15 +144,20 @@ export default function MatchDetailPage() {
     return Array.from(recipients);
   };
 
-  const handleJoin = async () => {
+  const handleJoin = async (slotIndex: number) => {
     if (!match || !user || !matchId) return;
-    if (match.listaParticipantes?.length >= match.plazas) {
+    const currentParticipants = (match.listaParticipantes || []) as Array<string | null | undefined>;
+
+    if (countFilledSlots(currentParticipants) >= match.plazas) {
       window.alert('Aviso\n\nEl partido ya esta completo');
       return;
     }
 
-    await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayUnion(user.uid) });
-    const others = getAudienceForMatchUpdates(user.uid);
+    if (currentParticipants[slotIndex]) return;
+
+    const nextParticipants = buildParticipantsWithInsertedUser(currentParticipants, slotIndex, user.uid);
+    await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: nextParticipants });
+    const others = getAudienceForMatchUpdates(user.uid, nextParticipants);
     const body = `${user.nombreApellidos} se ha unido al partido del ${match.fecha}.`;
     await sendConfiguredPushNotification(others, 'joins', 'PADEL Sabardes', body, {
       actorName: user.nombreApellidos,
@@ -132,8 +169,9 @@ export default function MatchDetailPage() {
 
   const handleLeave = async () => {
     if (!match || !user || !matchId) return;
-    await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayRemove(user.uid) });
-    const others = getAudienceForMatchUpdates(user.uid);
+    const nextParticipants = clearParticipantSlot((match.listaParticipantes || []) as Array<string | null | undefined>, user.uid);
+    await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: nextParticipants });
+    const others = getAudienceForMatchUpdates(user.uid, nextParticipants);
     const body = `${user.nombreApellidos} se ha dado de baja del partido del ${match.fecha}.`;
     await sendConfiguredPushNotification(others, 'leaves', 'PADEL Sabardes', body, {
       actorName: user.nombreApellidos,
@@ -145,7 +183,8 @@ export default function MatchDetailPage() {
 
   const executeKick = async () => {
     if (!match || !kickTarget || !matchId) return;
-    await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayRemove(kickTarget.uid) });
+    const nextParticipants = clearParticipantSlot((match.listaParticipantes || []) as Array<string | null | undefined>, kickTarget.uid);
+    await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: nextParticipants });
     const body = `El administrador te ha expulsado del partido del ${match.fecha}.`;
     await sendConfiguredPushNotification([kickTarget.uid], 'leaves', 'PADEL Sabardes', body, {
       targetName: kickTarget.nombreApellidos,
@@ -158,7 +197,7 @@ export default function MatchDetailPage() {
 
   const executeDelete = async () => {
     if (!matchId || !(user?.role === 'admin' || match?.creadorId === user?.uid)) return;
-    const others = (match?.listaParticipantes || []).filter((id: string) => id !== user?.uid);
+    const others = (match?.listaParticipantes || []).filter((id: string | null | undefined): id is string => typeof id === 'string' && id !== user?.uid);
     await deleteDoc(doc(db, 'matches', matchId));
     const body = `El partido del ${match?.fecha} ha sido cancelado.`;
     await sendConfiguredPushNotification(others, 'cancellations', 'Partido Cancelado', body, {
@@ -170,19 +209,25 @@ export default function MatchDetailPage() {
     navigate(-1);
   };
 
-  const openAdminPicker = async () => {
+  const openAdminPicker = async (slotIndex: number) => {
     if (allUsers.length === 0) {
       const snapshot = await getDocs(collection(db, 'users'));
       setAllUsers(snapshot.docs.map((entry) => ({ uid: entry.id, ...entry.data() })));
     }
+    setAdminTargetSlot(slotIndex);
     setAdminUserModalVisible(true);
   };
 
   const addPlayerAsAdmin = async (entry: any) => {
-    if (!matchId || !match) return;
+    if (!matchId || !match || adminTargetSlot === null) return;
     setAdminUserModalVisible(false);
-    await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: arrayUnion(entry.uid) });
-    const others = getAudienceForMatchUpdates(entry.uid);
+    const nextParticipants = buildParticipantsWithInsertedUser(
+      (match.listaParticipantes || []) as Array<string | null | undefined>,
+      adminTargetSlot,
+      entry.uid,
+    );
+    await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: nextParticipants });
+    const others = getAudienceForMatchUpdates(entry.uid, nextParticipants);
     const body = `El admin ha anadido a ${entry.nombreApellidos} al partido del ${match.fecha}.`;
     await sendConfiguredPushNotification(others, 'joins', 'PADEL Sabardes', body, {
       targetName: entry.nombreApellidos,
@@ -190,19 +235,22 @@ export default function MatchDetailPage() {
       matchTime: match.hora,
       location: match.ubicacion,
     });
+    setAdminTargetSlot(null);
   };
 
   const isTournament = !!match?.isTournament;
   const accentColor = isTournament ? '#D4A017' : primaryColor;
   const accentRgb = hexToRgbString(accentColor);
+  const max = match?.plazas || 4;
+  const half = Math.ceil(max / 2);
+  const occupiedSpots = countFilledSlots((match?.listaParticipantes || []) as Array<string | null | undefined>);
+  const playerSceneImages = [zeroPlayersCourt, onePlayerCourt, twoPlayersCourt, threePlayersCourt, fourPlayersCourt];
+  const playerSceneImage = playerSceneImages[Math.max(0, Math.min(occupiedSpots, playerSceneImages.length - 1))];
   const detailPageStyle = {
     '--detail-accent': accentColor,
     '--detail-accent-rgb': accentRgb,
     '--detail-hero-image': `url(${playerSceneImage})`,
   } as CSSProperties;
-  const max = match?.plazas || 4;
-  const half = Math.ceil(max / 2);
-  const occupiedSpots = match?.listaParticipantes?.length || 0;
   const verboseDate = match
     ? (() => {
         const date = parseMatchDateTime(match.fecha, match.hora);
@@ -224,8 +272,6 @@ export default function MatchDetailPage() {
     : null;
   const weatherLabel = highlightedWeather ? t(highlightedWeather.labelKey) : '';
   const weatherIsDay = highlightedWeather && 'isDay' in highlightedWeather ? highlightedWeather.isDay : true;
-  const playerSceneImages = [zeroPlayersCourt, onePlayerCourt, twoPlayersCourt, threePlayersCourt, fourPlayersCourt];
-  const playerSceneImage = playerSceneImages[Math.max(0, Math.min(occupiedSpots, playerSceneImages.length - 1))];
 
   if (loading || !match) {
     return <div className="centered-loader"><div className="spinner" style={{ borderTopColor: primaryColor }}></div></div>;
@@ -274,8 +320,8 @@ export default function MatchDetailPage() {
           className="detail-slot-empty"
           style={{ borderColor: accentColor }}
           onClick={() => {
-            if (user?.role === 'admin') openAdminPicker();
-            else if (!isParticipant) handleJoin();
+            if (user?.role === 'admin') openAdminPicker(index);
+            else if (!isParticipant) handleJoin(index);
           }}
           disabled={isParticipant && user?.role !== 'admin'}
         >
@@ -402,7 +448,10 @@ export default function MatchDetailPage() {
           <div className="modal-sheet detail-admin-picker">
             <div className="detail-admin-picker-header">
               <h3>{t('assign_player')}</h3>
-              <button onClick={() => setAdminUserModalVisible(false)}><X size={28} color={colors.textDim} /></button>
+              <button onClick={() => {
+                setAdminUserModalVisible(false);
+                setAdminTargetSlot(null);
+              }}><X size={28} color={colors.textDim} /></button>
             </div>
             <div className="scroll-area detail-admin-picker-list">
               {allUsers.filter((entry) => !(match.listaParticipantes || []).includes(entry.uid)).map((entry) => (

@@ -52,6 +52,14 @@ const getMinutes = (value: string) => {
   return hours * 60 + minutes;
 };
 
+const trimTrailingEmptySlots = <T,>(entries: Array<T | null | undefined>) => {
+  const next = [...entries];
+  while (next.length > 0 && !next[next.length - 1]) {
+    next.pop();
+  }
+  return next;
+};
+
 export default function CreateMatchPage() {
   const [searchParams] = useSearchParams();
   const matchId = searchParams.get('matchId') || searchParams.get('edit');
@@ -127,9 +135,9 @@ export default function CreateMatchPage() {
             }
 
             const newParticipants: Array<any | null> = [null, null, null, null];
-            (matchData.listaParticipantes || []).forEach((uid: string, index: number) => {
+            (matchData.listaParticipantes || []).forEach((uid: string | null, index: number) => {
               if (index < 4) {
-                newParticipants[index] = fetchedUsers.find((entry) => entry.id === uid) || null;
+                newParticipants[index] = uid ? fetchedUsers.find((entry) => entry.id === uid) || null : null;
               }
             });
             setPreParticipants(newParticipants);
@@ -189,7 +197,7 @@ export default function CreateMatchPage() {
       });
     }
 
-    const physicalParticipants = preParticipants.filter(Boolean).map((entry) => entry.id);
+    const physicalParticipants = trimTrailingEmptySlots(preParticipants.map((entry) => (entry ? entry.id : null)));
 
     setLoading(true);
     try {
@@ -262,7 +270,10 @@ export default function CreateMatchPage() {
         await addDoc(collection(db, 'matches'), { ...payload, fechaCreacion: new Date().toISOString() });
       }
 
-      const usersToNotify = new Set([...Array.from(finalInvitados), ...physicalParticipants]);
+      const usersToNotify = new Set([
+        ...Array.from(finalInvitados),
+        ...physicalParticipants.filter((uid): uid is string => typeof uid === 'string' && uid.length > 0),
+      ]);
       if (user?.uid) usersToNotify.delete(user.uid);
 
       if (matchId) {
