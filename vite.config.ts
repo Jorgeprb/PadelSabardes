@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      filename: 'sw.js',
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'padel-logo-192.png', 'padel-logo-512.png'],
@@ -33,8 +34,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // We will define specific push handling inside a custom sw via injectManifest if needed,
-        // but for now, generateSW is fine for caching, we will use a separate firebase-messaging-sw.js
+        importScripts: ['firebase-messaging-sw.js'],
       },
       devOptions: {
         enabled: true,

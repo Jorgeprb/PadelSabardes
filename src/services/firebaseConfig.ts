@@ -9,7 +9,7 @@ const DEFAULT_VAPID_KEY = 'BNUn7YkSeVJfhqyXBjRggYOov7T98R_nyK6uxUfmIQK_qaVFqWUAT
 
 export const VAPID_KEY = (import.meta.env.VITE_FIREBASE_VAPID_KEY || DEFAULT_VAPID_KEY).trim();
 const FUNCTIONS_REGION = import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION || 'us-east1';
-const MESSAGING_SW_URL = '/firebase-messaging-sw.js';
+const PWA_SW_URL = '/sw.js';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyCm1VfiIgEuQgRoK5L9Ad2ejHCdLg9B6yc',
@@ -38,28 +38,20 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'Notificati
 
 export const messaging = webMessaging;
 
-const hasMessagingWorker = (registration: ServiceWorkerRegistration | undefined) => {
-  const scriptUrls = [
-    registration?.active?.scriptURL,
-    registration?.waiting?.scriptURL,
-    registration?.installing?.scriptURL,
-  ].filter(Boolean) as string[];
-
-  return scriptUrls.some((url) => url.includes('firebase-messaging-sw.js'));
-};
-
 const ensureMessagingServiceWorkerRegistration = async () => {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null;
 
   const rootRegistration = await navigator.serviceWorker.getRegistration('/');
-  if (rootRegistration && !hasMessagingWorker(rootRegistration)) {
-    await navigator.serviceWorker.ready;
+  if (rootRegistration) {
     return rootRegistration;
   }
 
-  const registration = rootRegistration || await navigator.serviceWorker.register(MESSAGING_SW_URL);
-  await navigator.serviceWorker.ready;
-  return registration;
+  try {
+    return await navigator.serviceWorker.register(PWA_SW_URL);
+  } catch (error) {
+    console.warn('[Messaging] Error registering root service worker for notifications:', error);
+    return null;
+  }
 };
 
 export const requestPushNotificationToken = async () => {
