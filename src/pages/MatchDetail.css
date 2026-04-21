@@ -583,7 +583,7 @@
   }
 
   .detail-board-shell::before {
-    width: min(196px, calc(100% - 20px));
+    width: min(250px, calc(100% - 20px));
   }
 
   .detail-board-versus-ring {
@@ -593,7 +593,8 @@
 
   .detail-board-versus-ring::before {
     position: fixed;
-    right: 34px;
+    width: 4px;
+    right: 36px;
     height: 70px;
   }
 
