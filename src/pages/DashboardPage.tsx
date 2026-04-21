@@ -138,6 +138,7 @@ export default function DashboardPage() {
     const isParticipant = item.listaParticipantes?.includes(user?.uid);
     const isTournament = !!item.isTournament;
     const accentColor = isTournament ? '#D4A017' : primaryColor;
+    const cardBorderColor = isParticipant ? primaryColor : (isTournament ? '#D4A017' : colors.border);
     const participantSlots = Array.from({ length: 4 }, (_, index) => {
       const uid = item.listaParticipantes?.[index];
       if (!uid) return null;
@@ -210,9 +211,12 @@ export default function DashboardPage() {
         key={item.id}
         className="matches-card"
         style={{
-          borderColor: isParticipant || isTournament ? accentColor : colors.border,
+          borderColor: cardBorderColor,
           borderWidth: isParticipant || isTournament ? 2 : 1,
           backgroundColor: isTournament ? '#D4A01708' : colors.surface,
+          boxShadow: isParticipant
+            ? `0 0 0 1px ${primaryColor}20, 0 10px 24px rgba(0, 0, 0, 0.08)`
+            : undefined,
         }}
         onClick={handleOpenMatch}
         onKeyDown={(event) => {
@@ -236,11 +240,6 @@ export default function DashboardPage() {
           </div>
 
           <div className="matches-card-meta">
-            {isParticipant && (
-              <span className="matches-pill" style={{ backgroundColor: `${accentColor}22`, borderColor: accentColor, color: accentColor }}>
-                {t('joined')}
-              </span>
-            )}
             {highlightedWeather && (
               <div className="matches-weather-summary" style={{ borderColor: `${accentColor}33` }}>
                   <WeatherIcon kind={highlightedWeather.visualKind} isDay={'isDay' in highlightedWeather ? highlightedWeather.isDay : true} size={20} color={accentColor} />
