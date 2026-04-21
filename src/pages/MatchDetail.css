@@ -16,8 +16,8 @@
     linear-gradient(
       180deg,
       #000 0%,
-      #000 50%,
-      var(--bg-color) 50%,
+      #000 34%,
+      #06101d 64%,
       var(--bg-color) 100%
     );
 }
@@ -67,11 +67,11 @@
 .detail-hero-background {
   position: relative;
   margin-top: 0;
-  height: 214px;
+  height: 226px;
   border-radius: 0;
   background:
     radial-gradient(circle at 50% 72%, rgba(var(--detail-accent-rgb), 0.12), transparent 28%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.96) 0%, rgba(0, 0, 0, 0.78) 46%, rgba(0, 0, 0, 0) 100%);
+    linear-gradient(180deg, rgba(0, 0, 0, 0.96) 0%, rgba(0, 0, 0, 0.72) 40%, rgba(6, 16, 29, 0.3) 72%, rgba(6, 16, 29, 0) 100%);
   isolation: isolate;
   pointer-events: none;
 }
@@ -92,9 +92,7 @@
 }
 
 .detail-hero-background::after {
-  background:
-    radial-gradient(circle at 50% 82%, rgba(0, 0, 0, 0.34), transparent 36%),
-    radial-gradient(circle at 50% 68%, rgba(var(--detail-accent-rgb), 0.07), transparent 28%);
+  background: none;
   z-index: 1;
 }
 
@@ -116,14 +114,13 @@
     center bottom 0,
     center bottom 0;
   background-size:
-    min(320px, calc(100% - 18px)) auto,
-    min(320px, calc(100% - 18px)) auto,
-    min(320px, calc(100% - 18px)) auto,
-    min(320px, calc(100% - 18px)) auto,
-    min(320px, calc(100% - 18px)) auto;
+    min(304px, calc(100% - 24px)) auto,
+    min(304px, calc(100% - 24px)) auto,
+    min(304px, calc(100% - 24px)) auto,
+    min(304px, calc(100% - 24px)) auto,
+    min(304px, calc(100% - 24px)) auto;
   filter:
-    drop-shadow(0 20px 22px rgba(0, 0, 0, 0.38))
-    drop-shadow(0 0 14px rgba(var(--detail-accent-rgb), 0.08));
+    drop-shadow(0 14px 18px rgba(0, 0, 0, 0.24));
 }
 
 .detail-scroll {
@@ -238,8 +235,8 @@
 
 .detail-players-card {
   position: relative;
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 auto;
+  min-height: auto;
   padding: 12px 14px 10px;
   overflow: hidden;
 }
@@ -269,8 +266,8 @@
 
 .detail-board-shell {
   position: relative;
-  min-height: 216px;
-  height: 100%;
+  min-height: 188px;
+  height: auto;
   padding: 0 8px 2px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -531,17 +528,17 @@
 
 @media (max-width: 560px) {
   .detail-hero-background {
-    height: 186px;
+    height: 204px;
     margin-top: -2px;
   }
 
   .detail-hero-scene {
     background-size:
-      min(292px, calc(100% - 18px)) auto,
-      min(292px, calc(100% - 18px)) auto,
-      min(292px, calc(100% - 18px)) auto,
-      min(292px, calc(100% - 18px)) auto,
-      min(292px, calc(100% - 18px)) auto;
+      min(280px, calc(100% - 20px)) auto,
+      min(280px, calc(100% - 20px)) auto,
+      min(280px, calc(100% - 20px)) auto,
+      min(280px, calc(100% - 20px)) auto,
+      min(280px, calc(100% - 20px)) auto;
   }
 
   .detail-main-card {
@@ -559,7 +556,7 @@
   }
 
   .detail-board-shell {
-    min-height: 202px;
+    min-height: 174px;
     padding: 0 4px 2px;
     column-gap: 6px;
     row-gap: 6px;
