@@ -2,6 +2,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { db, messaging } = require("./firebase");
 
 const REGION = process.env.FUNCTIONS_REGION || "us-east1";
+const APP_URL = process.env.PUBLIC_APP_URL || "https://padelsabardes.onrender.com/";
 const ALLOWED_CATEGORIES = new Set(["invitations", "joins", "leaves", "changes", "cancellations", "always"]);
 const INVALID_TOKEN_ERRORS = new Set([
   "messaging/invalid-argument",
@@ -64,7 +65,7 @@ const sendPushNotifications = onCall({ region: REGION }, async (request) => {
       category,
       source: "padelsabardes",
       title,
-      url: "/",
+      url: APP_URL,
     },
     webpush: {
       headers: {
@@ -79,7 +80,7 @@ const sendPushNotifications = onCall({ region: REGION }, async (request) => {
         tag: `padelsabardes-${category}`,
       },
       fcmOptions: {
-        link: "/",
+        link: APP_URL,
       },
     },
   });

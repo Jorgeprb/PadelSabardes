@@ -10,7 +10,6 @@ const DEFAULT_VAPID_KEY = 'BNUn7YkSeVJfhqyXBjRggYOov7T98R_nyK6uxUfmIQK_qaVFqWUAT
 export const VAPID_KEY = (import.meta.env.VITE_FIREBASE_VAPID_KEY || DEFAULT_VAPID_KEY).trim();
 const FUNCTIONS_REGION = import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION || 'us-east1';
 const MESSAGING_SW_URL = '/firebase-messaging-sw.js';
-const MESSAGING_SW_SCOPE = '/firebase-cloud-messaging-push-scope/';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyCm1VfiIgEuQgRoK5L9Ad2ejHCdLg9B6yc',
@@ -39,7 +38,7 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'Notificati
 
 export const messaging = webMessaging;
 
-const hasLegacyMessagingWorker = (registration: ServiceWorkerRegistration | undefined) => {
+const hasMessagingWorker = (registration: ServiceWorkerRegistration | undefined) => {
   const scriptUrls = [
     registration?.active?.scriptURL,
     registration?.waiting?.scriptURL,
@@ -53,17 +52,12 @@ const ensureMessagingServiceWorkerRegistration = async () => {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null;
 
   const rootRegistration = await navigator.serviceWorker.getRegistration('/');
-  if (rootRegistration && hasLegacyMessagingWorker(rootRegistration)) {
-    await rootRegistration.unregister();
-  }
-
-  const scopedRegistration = await navigator.serviceWorker.getRegistration(new URL(MESSAGING_SW_SCOPE, window.location.origin).toString());
-  if (scopedRegistration) {
+  if (rootRegistration && !hasMessagingWorker(rootRegistration)) {
     await navigator.serviceWorker.ready;
-    return scopedRegistration;
+    return rootRegistration;
   }
 
-  const registration = await navigator.serviceWorker.register(MESSAGING_SW_URL, { scope: MESSAGING_SW_SCOPE });
+  const registration = rootRegistration || await navigator.serviceWorker.register(MESSAGING_SW_URL);
   await navigator.serviceWorker.ready;
   return registration;
 };
