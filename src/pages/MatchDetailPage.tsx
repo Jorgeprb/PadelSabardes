@@ -11,10 +11,10 @@ import WeatherIcon from '../components/WeatherIcon';
 import { useCourtWeather } from '../hooks/useCourtWeather';
 import { getHourlyFocusIndex, getWeatherForIsoDate, resolveMatchDateToIso } from '../services/weather';
 import zeroPlayersCourt from '../assets/0_jugadores.png';
-import onePlayerCourt from '../assets/1_jugadores.png';
-import twoPlayersCourt from '../assets/2_jugadores.png';
-import threePlayersCourt from '../assets/3_jugadores.png';
-import fourPlayersCourt from '../assets/4_jugadores.png';
+import topRightPlayerCourt from '../assets/arriba_dcha.png';
+import topLeftPlayerCourt from '../assets/arriba_izq.png';
+import bottomRightPlayerCourt from '../assets/abajo_dcha.png';
+import bottomLeftPlayerCourt from '../assets/abajo_izq.png';
 import { sendConfiguredPushNotification } from '../services/PushService';
 import './MatchDetail.css';
 
@@ -244,13 +244,18 @@ export default function MatchDetailPage() {
   const accentRgb = hexToRgbString(accentColor);
   const max = match?.plazas || 4;
   const half = Math.ceil(max / 2);
-  const occupiedSpots = countFilledSlots((match?.listaParticipantes || []) as Array<string | null | undefined>);
-  const playerSceneImages = [zeroPlayersCourt, onePlayerCourt, twoPlayersCourt, threePlayersCourt, fourPlayersCourt];
-  const playerSceneImage = playerSceneImages[Math.max(0, Math.min(occupiedSpots, playerSceneImages.length - 1))];
+  const participantSlots = Array.from(
+    { length: 4 },
+    (_, index) => (((match?.listaParticipantes || []) as Array<string | null | undefined>)[index] ?? null),
+  );
   const detailPageStyle = {
     '--detail-accent': accentColor,
     '--detail-accent-rgb': accentRgb,
-    '--detail-hero-image': `url(${playerSceneImage})`,
+    '--detail-hero-base': `url(${zeroPlayersCourt})`,
+    '--detail-hero-slot-top-left': participantSlots[0] ? `url(${topLeftPlayerCourt})` : 'none',
+    '--detail-hero-slot-top-right': participantSlots[1] ? `url(${topRightPlayerCourt})` : 'none',
+    '--detail-hero-slot-bottom-left': participantSlots[2] ? `url(${bottomLeftPlayerCourt})` : 'none',
+    '--detail-hero-slot-bottom-right': participantSlots[3] ? `url(${bottomRightPlayerCourt})` : 'none',
   } as CSSProperties;
   const verboseDate = match
     ? (() => {

@@ -1,7 +1,11 @@
 .detail-page {
   --detail-accent: #0ea5e9;
   --detail-accent-rgb: 14, 165, 233;
-  --detail-hero-image: none;
+  --detail-hero-base: none;
+  --detail-hero-slot-top-left: none;
+  --detail-hero-slot-top-right: none;
+  --detail-hero-slot-bottom-left: none;
+  --detail-hero-slot-bottom-right: none;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -64,17 +68,29 @@
     radial-gradient(circle at 50% 58%, rgba(var(--detail-accent-rgb), 0.18), transparent 34%),
     radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.03), transparent 24%),
     linear-gradient(180deg, rgba(2, 3, 5, 0.98) 0%, rgba(5, 7, 13, 0.96) 26%, rgba(8, 13, 24, 0.94) 68%, rgba(9, 16, 28, 0) 100%),
-    var(--detail-hero-image);
+    var(--detail-hero-slot-bottom-right),
+    var(--detail-hero-slot-bottom-left),
+    var(--detail-hero-slot-top-right),
+    var(--detail-hero-slot-top-left),
+    var(--detail-hero-base);
   background-repeat: no-repeat;
   background-position:
     center 58%,
     center 18%,
     center,
+    center bottom -6px,
+    center bottom -6px,
+    center bottom -6px,
+    center bottom -6px,
     center bottom -6px;
   background-size:
     100% 100%,
     100% 100%,
     100% 100%,
+    min(340px, calc(100% - 18px)) auto,
+    min(340px, calc(100% - 18px)) auto,
+    min(340px, calc(100% - 18px)) auto,
+    min(340px, calc(100% - 18px)) auto,
     min(340px, calc(100% - 18px)) auto;
   pointer-events: none;
 }
@@ -535,6 +551,10 @@
       100% 100%,
       100% 100%,
       100% 100%,
+      min(300px, calc(100% - 20px)) auto,
+      min(300px, calc(100% - 20px)) auto,
+      min(300px, calc(100% - 20px)) auto,
+      min(300px, calc(100% - 20px)) auto,
       min(300px, calc(100% - 20px)) auto;
   }
 
