@@ -1,7 +1,9 @@
 export const NOTIFICATION_TEMPLATE_CATEGORIES = [
   'invitations',
   'joins',
+  'assigned',
   'leaves',
+  'kicked',
   'changes',
   'cancellations',
 ] as const;
@@ -25,7 +27,9 @@ const DEFAULT_TEMPLATE: NotificationTemplate = {
 export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationTemplateMap = {
   invitations: { ...DEFAULT_TEMPLATE },
   joins: { ...DEFAULT_TEMPLATE },
+  assigned: { ...DEFAULT_TEMPLATE },
   leaves: { ...DEFAULT_TEMPLATE },
+  kicked: { ...DEFAULT_TEMPLATE },
   changes: { ...DEFAULT_TEMPLATE },
   cancellations: { ...DEFAULT_TEMPLATE },
 };

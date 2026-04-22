@@ -2,6 +2,37 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  --matches-calendar-card-bg:
+    radial-gradient(circle at top, rgba(14, 165, 233, 0.08), transparent 55%),
+    linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.94));
+  --matches-calendar-card-selected-bg:
+    radial-gradient(circle at top, rgba(14, 165, 233, 0.18), transparent 55%),
+    linear-gradient(180deg, rgba(17, 24, 39, 0.98), rgba(15, 23, 42, 0.96));
+  --matches-calendar-temp-color: #cbd5e1;
+  --matches-weather-summary-bg: rgba(15, 23, 42, 0.58);
+  --matches-weather-panel-bg: rgba(15, 23, 42, 0.45);
+  --matches-weather-panel-border: rgba(51, 65, 85, 0.8);
+  --matches-hourly-item-bg: rgba(15, 23, 42, 0.82);
+  --matches-hourly-item-border: rgba(51, 65, 85, 0.85);
+  --matches-hourly-item-focused-bg: linear-gradient(180deg, rgba(14, 165, 233, 0.12), rgba(15, 23, 42, 0.88));
+  --matches-hourly-temp-color: #cbd5e1;
+}
+
+:root[data-theme='light'] .matches-page {
+  --matches-calendar-card-bg:
+    radial-gradient(circle at top, rgba(14, 165, 233, 0.1), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.96));
+  --matches-calendar-card-selected-bg:
+    radial-gradient(circle at top, rgba(14, 165, 233, 0.18), transparent 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(226, 232, 240, 0.98));
+  --matches-calendar-temp-color: #475569;
+  --matches-weather-summary-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.96));
+  --matches-weather-panel-bg: rgba(255, 255, 255, 0.86);
+  --matches-weather-panel-border: rgba(148, 163, 184, 0.35);
+  --matches-hourly-item-bg: rgba(248, 250, 252, 0.98);
+  --matches-hourly-item-border: rgba(148, 163, 184, 0.4);
+  --matches-hourly-item-focused-bg: linear-gradient(180deg, rgba(14, 165, 233, 0.14), rgba(226, 232, 240, 0.96));
+  --matches-hourly-temp-color: #334155;
 }
 
 .matches-scroll {
@@ -66,9 +97,7 @@
   padding: 12px 10px 10px;
   border-radius: 24px;
   border: 1px solid var(--border-color);
-  background:
-    radial-gradient(circle at top, rgba(14, 165, 233, 0.08), transparent 55%),
-    linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.94));
+  background: var(--matches-calendar-card-bg);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -77,9 +106,7 @@
 }
 
 .matches-calendar-day-card.is-selected {
-  background:
-    radial-gradient(circle at top, rgba(14, 165, 233, 0.18), transparent 55%),
-    linear-gradient(180deg, rgba(17, 24, 39, 0.98), rgba(15, 23, 42, 0.96));
+  background: var(--matches-calendar-card-selected-bg);
 }
 
 .matches-calendar-badge {
@@ -118,7 +145,7 @@
 }
 
 .matches-calendar-temps {
-  color: #cbd5e1;
+  color: var(--matches-calendar-temp-color);
   font-size: calc(12px * var(--font-scale));
   font-weight: 700;
 }
@@ -184,7 +211,7 @@
   padding: 10px 12px;
   border-radius: 16px;
   border: 1px solid var(--border-color);
-  background: rgba(15, 23, 42, 0.58);
+  background: var(--matches-weather-summary-bg);
 }
 
 .matches-weather-summary-copy {
@@ -304,8 +331,8 @@
 .matches-hourly-panel {
   margin-top: 14px;
   border-radius: 18px;
-  border: 1px solid rgba(51, 65, 85, 0.8);
-  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid var(--matches-weather-panel-border);
+  background: var(--matches-weather-panel-bg);
   padding: 14px 12px;
 }
 
@@ -328,12 +355,12 @@
   gap: 8px;
   padding: 12px 10px;
   border-radius: 16px;
-  border: 1px solid rgba(51, 65, 85, 0.85);
-  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid var(--matches-hourly-item-border);
+  background: var(--matches-hourly-item-bg);
 }
 
 .matches-hourly-item.is-focused {
-  background: linear-gradient(180deg, rgba(14, 165, 233, 0.12), rgba(15, 23, 42, 0.88));
+  background: var(--matches-hourly-item-focused-bg);
 }
 
 .matches-hourly-time {
@@ -343,7 +370,7 @@
 }
 
 .matches-hourly-temp {
-  color: #cbd5e1;
+  color: var(--matches-hourly-temp-color);
   font-size: calc(13px * var(--font-scale));
   font-weight: 800;
 }

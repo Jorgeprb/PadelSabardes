@@ -3,7 +3,16 @@ const { db, messaging } = require("./firebase");
 
 const REGION = process.env.FUNCTIONS_REGION || "us-east1";
 const APP_URL = process.env.PUBLIC_APP_URL || "https://padelsabardes.onrender.com/";
-const ALLOWED_CATEGORIES = new Set(["invitations", "joins", "leaves", "changes", "cancellations", "always"]);
+const ALLOWED_CATEGORIES = new Set([
+  "invitations",
+  "joins",
+  "leaves",
+  "assigned",
+  "kicked",
+  "changes",
+  "cancellations",
+  "always",
+]);
 const INVALID_TOKEN_ERRORS = new Set([
   "messaging/invalid-argument",
   "messaging/invalid-registration-token",

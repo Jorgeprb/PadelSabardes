@@ -8,7 +8,15 @@ import {
   type NotificationTemplateVariables,
 } from './notificationTemplates';
 
-export type NotifCategory = 'invitations' | 'joins' | 'leaves' | 'changes' | 'cancellations' | 'always';
+export type NotifCategory =
+  | 'invitations'
+  | 'joins'
+  | 'leaves'
+  | 'assigned'
+  | 'kicked'
+  | 'changes'
+  | 'cancellations'
+  | 'always';
 
 const sendPushNotificationsCallable = httpsCallable<
   { uids: string[]; title: string; body: string; category: NotifCategory },

@@ -291,7 +291,7 @@ export default function DashboardPage() {
                         style={isFocused ? { borderColor: `${accentColor}88`, boxShadow: `0 0 0 1px ${accentColor}55 inset` } : undefined}
                       >
                         <span className="matches-hourly-time">{entry.hour}</span>
-                        <WeatherIcon kind={entry.visualKind} isDay={entry.isDay} size={22} color={isFocused ? accentColor : '#cbd5e1'} />
+                        <WeatherIcon kind={entry.visualKind} isDay={entry.isDay} size={22} color={isFocused ? accentColor : colors.textDim} />
                         <span className="matches-hourly-temp">{entry.temperature ?? '--'}°C</span>
                       </div>
                     );
@@ -345,7 +345,7 @@ export default function DashboardPage() {
                     {hasMatch && <span className="matches-calendar-badge" style={{ backgroundColor: primaryColor, borderColor: colors.background }}></span>}
                     <span className="matches-calendar-weather-icon">
                       {dayWeather ? (
-                        <WeatherIcon kind={dayWeather.visualKind} size={18} color={isSelected ? primaryColor : '#cbd5e1'} />
+                        <WeatherIcon kind={dayWeather.visualKind} size={18} color={isSelected ? primaryColor : colors.textDim} />
                       ) : (
                         <span className="matches-calendar-weather-fallback">{weatherLoading ? '…' : '—'}</span>
                       )}

@@ -186,8 +186,8 @@ export default function MatchDetailPage() {
     if (!match || !kickTarget || !matchId) return;
     const nextParticipants = clearParticipantSlot((match.listaParticipantes || []) as Array<string | null | undefined>, kickTarget.uid);
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: nextParticipants });
-    const body = `El administrador te ha expulsado del partido del ${match.fecha}.`;
-    await sendConfiguredPushNotification([kickTarget.uid], 'leaves', 'PADEL Sabardes', body, {
+    const body = 'Fuches expusado do partido';
+    await sendConfiguredPushNotification([kickTarget.uid], 'kicked', 'PADEL Sabardes', body, {
       targetName: kickTarget.nombreApellidos,
       matchDate: match.fecha,
       matchTime: match.hora,
@@ -231,6 +231,12 @@ export default function MatchDetailPage() {
     const others = getAudienceForMatchUpdates(entry.uid, nextParticipants);
     const body = `El admin ha anadido a ${entry.nombreApellidos} al partido del ${match.fecha}.`;
     await sendConfiguredPushNotification(others, 'joins', 'PADEL Sabardes', body, {
+      targetName: entry.nombreApellidos,
+      matchDate: match.fecha,
+      matchTime: match.hora,
+      location: match.ubicacion,
+    });
+    await sendConfiguredPushNotification([entry.uid], 'assigned', 'PADEL Sabardes', `Has sido apuntado para jugar el ${match.fecha} a las ${match.hora}`, {
       targetName: entry.nombreApellidos,
       matchDate: match.fecha,
       matchTime: match.hora,
