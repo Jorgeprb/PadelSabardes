@@ -147,6 +147,7 @@ export default function DashboardPage() {
     const participantsCount = participantSlots.filter(Boolean).length;
     const isFull = participantsCount >= 4;
     const freeSpots = 4 - participantsCount;
+    const isManager = user?.role === 'admin' || item.creadorId === user?.uid;
     const teamA = participantSlots.slice(0, 2);
     const teamB = participantSlots.slice(2, 4);
     const weatherForMatch = getWeatherForIsoDate(forecast, resolveMatchDateToIso(item.fecha));
@@ -155,6 +156,13 @@ export default function DashboardPage() {
     const highlightedTemperature = weatherForMatch.hourly[focusIndex]?.temperature ?? weatherForMatch.daily?.tempMax ?? null;
     const hourlySlice = getHourlySliceAround(weatherForMatch.hourly, item.hora, 3);
     const isWeatherExpanded = !!expandedWeather[item.id];
+    const primaryActionLabel = item.isPast
+      ? t('action_view_match')
+      : isManager
+        ? t('action_manage_match')
+        : isParticipant || isFull
+          ? t('action_view_match')
+          : t('action_pick_slot');
 
     const handleOpenMatch = () => navigate(`/match/${item.id}`);
 
@@ -312,7 +320,20 @@ export default function DashboardPage() {
           ) : (
             <span className="matches-footer-text" style={{ color: accentColor }}>{freeSpots} plaza{freeSpots !== 1 ? 's' : ''} libre{freeSpots !== 1 ? 's' : ''}</span>
           )}
-          <ChevronRight size={26} color={item.isPast ? colors.textDim : accentColor} />
+          <div className="matches-card-action-group">
+            <button
+              type="button"
+              className="matches-main-action"
+              style={{ borderColor: `${accentColor}55`, color: accentColor }}
+              onClick={(event) => {
+                event.stopPropagation();
+                handleOpenMatch();
+              }}
+            >
+              {primaryActionLabel}
+            </button>
+            <ChevronRight size={26} color={item.isPast ? colors.textDim : accentColor} />
+          </div>
         </div>
       </article>
     );

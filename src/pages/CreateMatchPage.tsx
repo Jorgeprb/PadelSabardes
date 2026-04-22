@@ -10,6 +10,8 @@ import WeatherIcon from '../components/WeatherIcon';
 import { useCourtWeather } from '../hooks/useCourtWeather';
 import { getHourlyFocusIndex, getWeatherForIsoDate } from '../services/weather';
 import { sendConfiguredPushNotification } from '../services/PushService';
+import { appendMatchHistory, createMatchHistoryEntry } from '../services/matchHistory';
+import { getReservationAvailability, type AvailabilityState, type MatchReservation } from '../services/matchScheduling';
 import './CreateMatch.css';
 
 const dayNames = {
@@ -52,6 +54,34 @@ const getMinutes = (value: string) => {
   return hours * 60 + minutes;
 };
 
+const normalizeTournamentReservations = (tournamentData: any) => {
+  const reservations: MatchReservation[] = [];
+
+  const pushTournamentReservation = (entry: any, prefix: string) => {
+    if (!entry || (entry.status !== 'scheduled' && entry.status !== 'confirmed') || !entry.date) return;
+    const [datePart, timePart] = entry.date.split(' ');
+    if (!datePart || !timePart) return;
+    reservations.push({
+      id: `${prefix}-${entry.id || entry.matchId || entry.date}`,
+      date: datePart.substring(0, 5),
+      time: timePart,
+      source: 'tournament',
+    });
+  };
+
+  (tournamentData?.schedule || []).forEach((entry: any) => pushTournamentReservation(entry, 'schedule'));
+  (tournamentData?.bracket?.quarterfinals || []).forEach((entry: any) => pushTournamentReservation(entry, 'quarter'));
+  (tournamentData?.bracket?.semifinals || []).forEach((entry: any) => pushTournamentReservation(entry, 'semi'));
+
+  if (Array.isArray(tournamentData?.bracket?.final)) {
+    tournamentData.bracket.final.forEach((entry: any) => pushTournamentReservation(entry, 'final'));
+  } else {
+    pushTournamentReservation(tournamentData?.bracket?.final, 'final');
+  }
+
+  return reservations;
+};
+
 const trimTrailingEmptySlots = <T,>(entries: Array<T | null | undefined>) => {
   const next = [...entries];
   while (next.length > 0 && !next[next.length - 1]) {
@@ -87,6 +117,8 @@ export default function CreateMatchPage() {
     creadorNombre?: string;
     fechaCreacion?: string;
   } | null>(null);
+  const [existingMatchData, setExistingMatchData] = useState<any | null>(null);
+  const [reservations, setReservations] = useState<MatchReservation[]>([]);
 
   const hourlyItemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -99,6 +131,23 @@ export default function CreateMatchPage() {
         const fetchedUsers = usersSnapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
         setUsers(fetchedUsers);
 
+        const matchesSnapshot = await getDocs(collection(db, 'matches'));
+        const matchReservations = matchesSnapshot.docs.map((entry) => {
+          const data = entry.data() as any;
+          return {
+            id: entry.id,
+            date: data.fecha,
+            time: data.hora,
+            source: 'match' as const,
+          };
+        }).filter((entry) => entry.date && entry.time);
+
+        const tournamentSnapshot = await getDoc(doc(db, 'tournament', 'currentTournament'));
+        const tournamentReservations = tournamentSnapshot.exists()
+          ? normalizeTournamentReservations(tournamentSnapshot.data())
+          : [];
+        setReservations([...matchReservations, ...tournamentReservations]);
+
         if (isAdmin) {
           const groupsSnapshot = await getDocs(collection(db, 'groups'));
           setGroups(groupsSnapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() })));
@@ -108,6 +157,7 @@ export default function CreateMatchPage() {
           const matchSnapshot = await getDoc(doc(db, 'matches', matchId));
           if (matchSnapshot.exists()) {
             const matchData = matchSnapshot.data();
+            setExistingMatchData(matchData);
             setExistingMatchMeta({
               creadorId: matchData.creadorId,
               creadorNombre: matchData.creadorNombre,
@@ -158,6 +208,19 @@ export default function CreateMatchPage() {
     [weatherForSelectedDay.hourly, timeValue],
   );
   const highlightedHour = weatherForSelectedDay.hourly[selectedHourlyIndex] || null;
+  const selectedDateLabel = useMemo(() => formatDDMM(dateObject), [dateObject]);
+  const availabilityByHour = useMemo(() => (
+    Object.fromEntries(
+      weatherForSelectedDay.hourly.map((entry) => [
+        entry.isoTime,
+        getReservationAvailability(selectedDateLabel, entry.hour, reservations, matchId),
+      ]),
+    ) as Record<string, AvailabilityState>
+  ), [matchId, reservations, selectedDateLabel, weatherForSelectedDay.hourly]);
+  const selectedAvailability = useMemo(
+    () => getReservationAvailability(selectedDateLabel, timeValue, reservations, matchId),
+    [matchId, reservations, selectedDateLabel, timeValue],
+  );
 
   useEffect(() => {
     const focusedHourly = weatherForSelectedDay.hourly[selectedHourlyIndex];
@@ -261,13 +324,38 @@ export default function CreateMatchPage() {
         estado: 'abierto',
       };
 
+      let savedMatchId = matchId;
       if (matchId) {
         await updateDoc(doc(db, 'matches', matchId), {
           ...payload,
           ...(existingMatchMeta?.fechaCreacion ? { fechaCreacion: existingMatchMeta.fechaCreacion } : {}),
         });
       } else {
-        await addDoc(collection(db, 'matches'), { ...payload, fechaCreacion: new Date().toISOString() });
+        const createdRef = await addDoc(collection(db, 'matches'), { ...payload, fechaCreacion: new Date().toISOString() });
+        savedMatchId = createdRef.id;
+      }
+
+      if (savedMatchId) {
+        const historyEntry = !matchId
+          ? createMatchHistoryEntry('created', {
+              actorName: user.nombreApellidos,
+              actorUid: user.uid,
+            })
+          : (existingMatchData?.fecha !== finalFecha || existingMatchData?.hora !== finalHora || existingMatchData?.ubicacion !== payload.ubicacion)
+            ? createMatchHistoryEntry('schedule_changed', {
+                actorName: user.nombreApellidos,
+                actorUid: user.uid,
+                matchDate: finalFecha,
+                matchTime: finalHora,
+              })
+            : createMatchHistoryEntry('updated', {
+                actorName: user.nombreApellidos,
+                actorUid: user.uid,
+              });
+
+        void appendMatchHistory(savedMatchId, historyEntry).catch((error) => {
+          console.error('Error guardando historial del partido:', error);
+        });
       }
 
       const usersToNotify = new Set([
@@ -412,6 +500,12 @@ export default function CreateMatchPage() {
     );
   };
 
+  const getAvailabilityColor = (availability: AvailabilityState) => {
+    if (availability === 'busy') return colors.danger;
+    if (availability === 'near') return '#f59e0b';
+    return '#10b981';
+  };
+
   return (
     <div className="create-match-page">
       <div className="create-match-header">
@@ -445,6 +539,9 @@ export default function CreateMatchPage() {
             <div>
               <div className="create-match-section-title">{t('weather_forecast')}</div>
               <div className="create-match-weather-caption">{t('weather_match_hour')} · {timeValue}</div>
+              <div className="create-match-weather-caption create-match-weather-caption-availability">
+                {t('availability_legend')} · <span style={{ color: getAvailabilityColor(selectedAvailability) }}>{t(`availability_${selectedAvailability}` as any)}</span>
+              </div>
             </div>
             {highlightedHour && (
               <div className="create-match-weather-summary" style={{ borderColor: `${primaryColor}33` }}>
@@ -467,16 +564,25 @@ export default function CreateMatchPage() {
             <div className="create-match-hourly-scroll">
               {weatherForSelectedDay.hourly.map((entry, index) => {
                 const isSelected = index === selectedHourlyIndex;
+                const availability = availabilityByHour[entry.isoTime] || 'free';
                 return (
                   <div
                     key={entry.isoTime}
                     ref={(node) => { hourlyItemRefs.current[entry.isoTime] = node; }}
                     className={`create-match-hourly-card ${isSelected ? 'is-selected' : ''}`}
-                    style={isSelected ? { borderColor: `${primaryColor}aa`, boxShadow: `0 0 0 1px ${primaryColor}55 inset, 0 0 18px ${primaryColor}25` } : undefined}
+                    style={{
+                      borderColor: isSelected ? `${primaryColor}aa` : `${getAvailabilityColor(availability)}55`,
+                      boxShadow: isSelected
+                        ? `0 0 0 1px ${primaryColor}55 inset, 0 0 18px ${primaryColor}25`
+                        : undefined,
+                    }}
                   >
                     <span className="create-match-hourly-time">{entry.hour}</span>
-                    <WeatherIcon kind={entry.visualKind} isDay={entry.isDay} size={28} color={isSelected ? primaryColor : '#cbd5e1'} />
+                    <WeatherIcon kind={entry.visualKind} isDay={entry.isDay} size={28} color={isSelected ? primaryColor : colors.textDim} />
                     <span className="create-match-hourly-temp">{entry.temperature ?? '--'}°C</span>
+                    <span className={`create-match-hourly-status availability-${availability}`} style={{ color: getAvailabilityColor(availability) }}>
+                      {t(`availability_${availability}` as any)}
+                    </span>
                     {isSelected && <span className="create-match-hourly-tag">{t('weather_selected_hour')}</span>}
                   </div>
                 );

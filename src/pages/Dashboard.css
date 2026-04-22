@@ -389,6 +389,12 @@
   border-top: 1px solid var(--border-color);
 }
 
+.matches-card-action-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .matches-footer-text {
   font-size: calc(14px * var(--font-scale));
   font-weight: 900;
@@ -397,6 +403,20 @@
 .matches-footer-text.muted {
   color: var(--text-secondary);
   font-weight: 500;
+}
+
+.matches-main-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-color) 88%, transparent);
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 900;
+  letter-spacing: 0.2px;
 }
 
 .matches-fab {

@@ -16,6 +16,7 @@ import topLeftPlayerCourt from '../assets/arriba_izq.png';
 import bottomRightPlayerCourt from '../assets/abajo_dcha.png';
 import bottomLeftPlayerCourt from '../assets/abajo_izq.png';
 import { sendConfiguredPushNotification } from '../services/PushService';
+import { appendMatchHistory, createMatchHistoryEntry, renderMatchHistoryText } from '../services/matchHistory';
 import './MatchDetail.css';
 
 const LONG_DAY_NAMES = {
@@ -100,6 +101,7 @@ export default function MatchDetailPage() {
   const [adminTargetSlot, setAdminTargetSlot] = useState<number | null>(null);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [avatarPreview, setAvatarPreview] = useState<{ imageUrl: string; alt: string } | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
 
   useEffect(() => {
     if (!matchId) return undefined;
@@ -158,6 +160,10 @@ export default function MatchDetailPage() {
 
     const nextParticipants = buildParticipantsWithInsertedUser(currentParticipants, slotIndex, user.uid);
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: nextParticipants });
+    void appendMatchHistory(matchId, createMatchHistoryEntry('joined', {
+      actorName: user.nombreApellidos,
+      actorUid: user.uid,
+    })).catch((error) => console.error('Error guardando historial del partido:', error));
     const others = getAudienceForMatchUpdates(user.uid, nextParticipants);
     const body = `${user.nombreApellidos} se ha unido al partido del ${match.fecha}.`;
     await sendConfiguredPushNotification(others, 'joins', 'PADEL Sabardes', body, {
@@ -172,6 +178,10 @@ export default function MatchDetailPage() {
     if (!match || !user || !matchId) return;
     const nextParticipants = clearParticipantSlot((match.listaParticipantes || []) as Array<string | null | undefined>, user.uid);
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: nextParticipants });
+    void appendMatchHistory(matchId, createMatchHistoryEntry('left', {
+      actorName: user.nombreApellidos,
+      actorUid: user.uid,
+    })).catch((error) => console.error('Error guardando historial del partido:', error));
     const others = getAudienceForMatchUpdates(user.uid, nextParticipants);
     const body = `${user.nombreApellidos} se ha dado de baja del partido del ${match.fecha}.`;
     await sendConfiguredPushNotification(others, 'leaves', 'PADEL Sabardes', body, {
@@ -183,9 +193,14 @@ export default function MatchDetailPage() {
   };
 
   const executeKick = async () => {
-    if (!match || !kickTarget || !matchId) return;
+    if (!match || !kickTarget || !matchId || !user) return;
     const nextParticipants = clearParticipantSlot((match.listaParticipantes || []) as Array<string | null | undefined>, kickTarget.uid);
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: nextParticipants });
+    void appendMatchHistory(matchId, createMatchHistoryEntry('kicked', {
+      actorName: user.nombreApellidos,
+      actorUid: user.uid,
+      targetName: kickTarget.nombreApellidos,
+    })).catch((error) => console.error('Error guardando historial del partido:', error));
     const body = 'Fuches expusado do partido';
     await sendConfiguredPushNotification([kickTarget.uid], 'kicked', 'PADEL Sabardes', body, {
       targetName: kickTarget.nombreApellidos,
@@ -200,13 +215,18 @@ export default function MatchDetailPage() {
     if (!matchId || !(user?.role === 'admin' || match?.creadorId === user?.uid)) return;
     const others = (match?.listaParticipantes || []).filter((id: string | null | undefined): id is string => typeof id === 'string' && id !== user?.uid);
     await deleteDoc(doc(db, 'matches', matchId));
-    const body = `El partido del ${match?.fecha} ha sido cancelado.`;
+    const trimmedReason = cancelReason.trim();
+    const body = trimmedReason
+      ? `El partido del ${match?.fecha} ha sido cancelado. Motivo: ${trimmedReason}`
+      : `El partido del ${match?.fecha} ha sido cancelado.`;
     await sendConfiguredPushNotification(others, 'cancellations', 'Partido Cancelado', body, {
       matchDate: match?.fecha,
       matchTime: match?.hora,
       location: match?.ubicacion,
+      reason: trimmedReason,
     });
     setShowDeleteModal(false);
+    setCancelReason('');
     navigate(-1);
   };
 
@@ -220,7 +240,7 @@ export default function MatchDetailPage() {
   };
 
   const addPlayerAsAdmin = async (entry: any) => {
-    if (!matchId || !match || adminTargetSlot === null) return;
+    if (!matchId || !match || adminTargetSlot === null || !user) return;
     setAdminUserModalVisible(false);
     const nextParticipants = buildParticipantsWithInsertedUser(
       (match.listaParticipantes || []) as Array<string | null | undefined>,
@@ -228,6 +248,11 @@ export default function MatchDetailPage() {
       entry.uid,
     );
     await updateDoc(doc(db, 'matches', matchId), { listaParticipantes: nextParticipants });
+    void appendMatchHistory(matchId, createMatchHistoryEntry('added', {
+      actorName: user.nombreApellidos,
+      actorUid: user.uid,
+      targetName: entry.nombreApellidos,
+    })).catch((error) => console.error('Error guardando historial del partido:', error));
     const others = getAudienceForMatchUpdates(entry.uid, nextParticipants);
     const body = `El admin ha anadido a ${entry.nombreApellidos} al partido del ${match.fecha}.`;
     await sendConfiguredPushNotification(others, 'joins', 'PADEL Sabardes', body, {
@@ -283,6 +308,7 @@ export default function MatchDetailPage() {
     : null;
   const weatherLabel = highlightedWeather ? t(highlightedWeather.labelKey) : '';
   const weatherIsDay = highlightedWeather && 'isDay' in highlightedWeather ? highlightedWeather.isDay : true;
+  const historyEntries = Array.isArray(match?.historial) ? match.historial : [];
 
   if (loading || !match) {
     return <div className="centered-loader"><div className="spinner" style={{ borderTopColor: primaryColor }}></div></div>;
@@ -290,6 +316,10 @@ export default function MatchDetailPage() {
 
   const isParticipant = match.listaParticipantes?.includes(user?.uid);
   const canManageMatch = user?.role === 'admin' || match.creadorId === user?.uid;
+  const formatHistoryTimestamp = (value: string) => {
+    const date = new Date(value);
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')} · ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  };
 
   const renderSlot = (index: number) => {
     const participant = participantsData[index];
@@ -416,6 +446,22 @@ export default function MatchDetailPage() {
             </div>
           </div>
         </div>
+
+        <div className="detail-history-card card">
+          <div className="detail-section-title">{t('match_history_title')}</div>
+          {historyEntries.length === 0 ? (
+            <p className="detail-history-empty">{t('match_history_empty')}</p>
+          ) : (
+            <div className="detail-history-list">
+              {historyEntries.map((entry: any) => (
+                <div key={entry.id || entry.createdAt} className="detail-history-row">
+                  <div className="detail-history-copy">{renderMatchHistoryText(entry, t)}</div>
+                  <div className="detail-history-time">{formatHistoryTimestamp(entry.createdAt)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {avatarPreview && (
@@ -432,8 +478,19 @@ export default function MatchDetailPage() {
             <Trash2 size={48} color={colors.danger} />
             <h3>{t('delete_match_confirm')}</h3>
             <p>{t('delete_match_msg')}</p>
+            <div className="detail-reason-field">
+              <label htmlFor="cancel-reason">{t('cancel_reason_label')} · {t('cancel_reason_optional')}</label>
+              <textarea
+                id="cancel-reason"
+                className="textarea-field"
+                rows={3}
+                value={cancelReason}
+                onChange={(event) => setCancelReason(event.target.value)}
+                placeholder={t('cancel_reason_placeholder')}
+              />
+            </div>
             <div className="detail-modal-actions">
-              <button className="btn btn-outline" onClick={() => setShowDeleteModal(false)}>{t('cancel')}</button>
+              <button className="btn btn-outline" onClick={() => { setShowDeleteModal(false); setCancelReason(''); }}>{t('cancel')}</button>
               <button className="btn btn-danger" onClick={executeDelete}>{t('delete')}</button>
             </div>
           </div>

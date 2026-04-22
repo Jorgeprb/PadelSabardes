@@ -127,6 +127,10 @@
   font-weight: 700;
 }
 
+.create-match-weather-caption-availability {
+  margin-top: 4px;
+}
+
 .create-match-weather-summary {
   display: flex;
   align-items: center;
@@ -209,6 +213,13 @@
   font-size: calc(11px * var(--font-scale));
   font-weight: 800;
   text-align: center;
+}
+
+.create-match-hourly-status {
+  font-size: calc(11px * var(--font-scale));
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 .create-match-team-row {

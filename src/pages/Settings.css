@@ -337,6 +337,35 @@
   justify-content: flex-start;
 }
 
+.settings-reminder-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.settings-reminder-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-color);
+  color: var(--text-primary);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 700;
+}
+
+.settings-reminder-form {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.settings-reminder-form .input-field {
+  flex: 1;
+}
+
 .settings-mpw-row {
   display: flex;
   align-items: center;
@@ -500,7 +529,8 @@
   }
 
   .settings-language-row,
-  .settings-font-row {
+  .settings-font-row,
+  .settings-reminder-form {
     flex-direction: column;
   }
 

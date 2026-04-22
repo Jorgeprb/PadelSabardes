@@ -12,6 +12,7 @@ import './App.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider, useTranslation } from './context/LanguageContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -139,9 +140,11 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
         <LanguageProvider>
-          <AuthProvider>
-            <AppShell />
-          </AuthProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <AppShell />
+            </AuthProvider>
+          </ToastProvider>
         </LanguageProvider>
       </ThemeProvider>
     </BrowserRouter>

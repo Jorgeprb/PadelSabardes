@@ -14,6 +14,7 @@ export type NotifCategory =
   | 'leaves'
   | 'assigned'
   | 'kicked'
+  | 'reminders'
   | 'changes'
   | 'cancellations'
   | 'always';

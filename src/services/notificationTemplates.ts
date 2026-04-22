@@ -4,6 +4,7 @@ export const NOTIFICATION_TEMPLATE_CATEGORIES = [
   'assigned',
   'leaves',
   'kicked',
+  'reminders',
   'changes',
   'cancellations',
 ] as const;
@@ -30,6 +31,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: NotificationTemplateMap = {
   assigned: { ...DEFAULT_TEMPLATE },
   leaves: { ...DEFAULT_TEMPLATE },
   kicked: { ...DEFAULT_TEMPLATE },
+  reminders: { ...DEFAULT_TEMPLATE },
   changes: { ...DEFAULT_TEMPLATE },
   cancellations: { ...DEFAULT_TEMPLATE },
 };

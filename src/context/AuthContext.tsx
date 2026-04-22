@@ -18,6 +18,7 @@ export interface AppUser {
     invitations: boolean;
     joins: boolean;
     leaves: boolean;
+    reminders: boolean;
     changes: boolean;
     cancellations: boolean;
   };

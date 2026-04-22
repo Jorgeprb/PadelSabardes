@@ -30,6 +30,11 @@ import {
   normalizeNotificationTemplates,
   type NotificationTemplateMap,
 } from '../services/notificationTemplates';
+import {
+  DEFAULT_NOTIFICATION_SETTINGS,
+  normalizeNotificationSettings,
+  type NotificationSettings,
+} from '../services/notificationSettings';
 import './Settings.css';
 
 const COLOR_PALETTE = [
@@ -95,12 +100,17 @@ export default function SettingsPage() {
     invitations: true,
     joins: true,
     leaves: true,
+    reminders: true,
     changes: true,
     cancellations: true,
   });
   const [notificationTemplates, setNotificationTemplates] = useState<NotificationTemplateMap>(DEFAULT_NOTIFICATION_TEMPLATES);
   const [notificationTemplatesExpanded, setNotificationTemplatesExpanded] = useState(false);
   const [savingNotificationTemplates, setSavingNotificationTemplates] = useState(false);
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
+  const [automaticRemindersExpanded, setAutomaticRemindersExpanded] = useState(false);
+  const [newReminderMinutes, setNewReminderMinutes] = useState('60');
+  const [savingNotificationSettings, setSavingNotificationSettings] = useState(false);
 
   useEffect(() => {
     setNameInput(user?.nombreApellidos || '');
@@ -128,10 +138,15 @@ export default function SettingsPage() {
       setNotificationTemplates(normalizeNotificationTemplates(snapshot.data()));
     });
 
+    const unsubscribeNotificationSettings = onSnapshot(doc(db, 'config', 'notificationSettings'), (snapshot) => {
+      setNotificationSettings(normalizeNotificationSettings(snapshot.data()));
+    });
+
     return () => {
       unsubscribeNotifPrefs();
       unsubscribeTournamentSlots();
       unsubscribeSettings();
+      unsubscribeNotificationSettings();
     };
   }, [user?.uid]);
 
@@ -277,6 +292,34 @@ export default function SettingsPage() {
       window.alert(`${t('error')}\n\n${error.message}`);
     } finally {
       setSavingNotificationTemplates(false);
+    }
+  };
+
+  const addReminderOffset = () => {
+    const parsedMinutes = Number(newReminderMinutes);
+    if (!Number.isFinite(parsedMinutes) || parsedMinutes <= 0) return;
+
+    setNotificationSettings((previous) => ({
+      reminderOffsetsMinutes: Array.from(new Set([...previous.reminderOffsetsMinutes, Math.round(parsedMinutes)])).sort((left, right) => left - right),
+    }));
+    setNewReminderMinutes('60');
+  };
+
+  const removeReminderOffset = (minutes: number) => {
+    setNotificationSettings((previous) => ({
+      reminderOffsetsMinutes: previous.reminderOffsetsMinutes.filter((entry) => entry !== minutes),
+    }));
+  };
+
+  const handleSaveNotificationSettings = async () => {
+    setSavingNotificationSettings(true);
+    try {
+      await setDoc(doc(db, 'config', 'notificationSettings'), notificationSettings, { merge: true });
+      window.alert(`${t('success')}\n\n${t('notif_auto_reminders_saved')}`);
+    } catch (error: any) {
+      window.alert(`${t('error')}\n\n${error.message}`);
+    } finally {
+      setSavingNotificationSettings(false);
     }
   };
 
@@ -497,6 +540,8 @@ export default function SettingsPage() {
               )}
               <ToggleRow icon={<Users size={18} color={primaryColor} />} label={t('notif_leaves')} value={notifPrefs.leaves} onToggle={(value) => saveNotifPref('leaves', value)} />
               <div className="settings-divider"></div>
+              <ToggleRow icon={<Clock3 size={18} color={primaryColor} />} label={t('notif_reminders')} value={notifPrefs.reminders} onToggle={(value) => saveNotifPref('reminders', value)} />
+              <div className="settings-divider"></div>
               <ToggleRow icon={<Clock3 size={18} color={primaryColor} />} label={t('notif_changes')} value={notifPrefs.changes} onToggle={(value) => saveNotifPref('changes', value)} />
               <div className="settings-divider"></div>
               <ToggleRow icon={<X size={18} color={primaryColor} />} label={t('notif_cancellations')} value={notifPrefs.cancellations} onToggle={(value) => saveNotifPref('cancellations', value)} />
@@ -555,6 +600,79 @@ export default function SettingsPage() {
                       >
                         <Bell size={14} color={primaryColor} />
                         {savingNotificationTemplates ? '...' : t('save_changes')}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="settings-divider"></div>
+              <button className="settings-action-row" onClick={() => setAutomaticRemindersExpanded((previous) => !previous)}>
+                <div className="settings-action-left">
+                  <span className="settings-action-icon"><Clock3 size={18} color={primaryColor} /></span>
+                  <span>{t('notif_auto_reminders_title')}</span>
+                </div>
+                <ChevronRight
+                  size={18}
+                  color={colors.textDim}
+                  style={{ transform: automaticRemindersExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
+                />
+              </button>
+
+              {automaticRemindersExpanded && (
+                <>
+                  <div className="settings-divider"></div>
+                  <div className="settings-template-stack">
+                    <p className="settings-help-text">{t('notif_auto_reminders_desc')}</p>
+
+                    {notificationSettings.reminderOffsetsMinutes.length === 0 ? (
+                      <p className="settings-help-text">{t('notif_auto_reminders_empty')}</p>
+                    ) : (
+                      <div className="settings-reminder-chip-row">
+                        {notificationSettings.reminderOffsetsMinutes.map((minutes) => (
+                          <button
+                            key={minutes}
+                            type="button"
+                            className="settings-reminder-chip"
+                            onClick={() => removeReminderOffset(minutes)}
+                          >
+                            <span>{minutes} min</span>
+                            <X size={14} color={colors.textDim} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="settings-reminder-form">
+                      <input
+                        className="input-field"
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={newReminderMinutes}
+                        onChange={(event) => setNewReminderMinutes(event.target.value)}
+                        placeholder={t('notif_auto_reminders_minutes')}
+                      />
+                      <button
+                        type="button"
+                        className="settings-retry-button"
+                        style={{ borderColor: primaryColor, color: primaryColor }}
+                        onClick={addReminderOffset}
+                      >
+                        <Clock3 size={14} color={primaryColor} />
+                        {t('notif_auto_reminders_add')}
+                      </button>
+                    </div>
+
+                    <div className="settings-template-actions">
+                      <button
+                        className="settings-retry-button"
+                        style={{ borderColor: primaryColor, color: primaryColor }}
+                        onClick={handleSaveNotificationSettings}
+                        disabled={savingNotificationSettings}
+                      >
+                        <Clock3 size={14} color={primaryColor} />
+                        {savingNotificationSettings ? '...' : t('save_changes')}
                       </button>
                     </div>
                   </div>
