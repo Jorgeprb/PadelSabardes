@@ -120,7 +120,7 @@ export default function CreateMatchPage() {
   const [existingMatchData, setExistingMatchData] = useState<any | null>(null);
   const [reservations, setReservations] = useState<MatchReservation[]>([]);
 
-  const hourlyItemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const hourlyItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const isAdmin = user?.role === 'admin';
 
