@@ -65,10 +65,6 @@ const sendPushNotifications = onCall({ region: REGION }, async (request) => {
 
   const response = await messaging.sendEachForMulticast({
     tokens,
-    notification: {
-      title,
-      body,
-    },
     data: {
       body,
       category,
@@ -80,16 +76,6 @@ const sendPushNotifications = onCall({ region: REGION }, async (request) => {
       headers: {
         TTL: "300",
         Urgency: "high",
-      },
-      notification: {
-        title,
-        badge: "/padel-logo-192.png",
-        body,
-        icon: "/padel-logo-192.png",
-        tag: `padelsabardes-${category}`,
-      },
-      fcmOptions: {
-        link: APP_URL,
       },
     },
   });
