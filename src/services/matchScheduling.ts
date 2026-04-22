@@ -54,9 +54,8 @@ export const getReservationAvailability = (
       return 'busy';
     }
 
-    const gapBefore = Math.abs(reservationStart - end);
-    const gapAfter = Math.abs(start - reservationEnd);
-    if (gapBefore <= NEAR_MARGIN_MINUTES || gapAfter <= NEAR_MARGIN_MINUTES) {
+    const gapAfterReservation = start - reservationEnd;
+    if (gapAfterReservation > 0 && gapAfterReservation <= NEAR_MARGIN_MINUTES) {
       isNear = true;
     }
   }

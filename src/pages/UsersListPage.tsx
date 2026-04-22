@@ -5,6 +5,7 @@ import { db } from '../services/firebaseConfig';
 import { deleteUserAsAdmin } from '../services/adminService';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from '../context/LanguageContext';
+import AvatarPreviewModal from '../components/AvatarPreviewModal';
 import './AdminPages.css';
 
 export default function UsersListPage() {
@@ -15,6 +16,7 @@ export default function UsersListPage() {
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<{ imageUrl: string; alt: string } | null>(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -64,7 +66,13 @@ export default function UsersListPage() {
           users.map((entry) => (
             <div key={entry.id} className="admin-card">
               {entry.fotoURL ? (
-                <img src={entry.fotoURL} alt={entry.nombreApellidos} className="admin-avatar" />
+                <button
+                  type="button"
+                  className="admin-avatar-button"
+                  onClick={() => setAvatarPreview({ imageUrl: entry.fotoURL, alt: entry.nombreApellidos })}
+                >
+                  <img src={entry.fotoURL} alt={entry.nombreApellidos} className="admin-avatar" />
+                </button>
               ) : (
                 <div className="admin-avatar-placeholder">{entry.nombreApellidos?.charAt(0)?.toUpperCase() || '?'}</div>
               )}
@@ -102,6 +110,14 @@ export default function UsersListPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {avatarPreview && (
+        <AvatarPreviewModal
+          imageUrl={avatarPreview.imageUrl}
+          alt={avatarPreview.alt}
+          onClose={() => setAvatarPreview(null)}
+        />
       )}
     </div>
   );

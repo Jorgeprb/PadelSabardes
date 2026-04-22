@@ -62,6 +62,16 @@
   flex-shrink: 0;
 }
 
+.admin-avatar-button {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  cursor: zoom-in;
+  flex-shrink: 0;
+}
+
 .admin-avatar {
   object-fit: cover;
 }

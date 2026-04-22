@@ -108,7 +108,7 @@ export default function CreateMatchPage() {
   const [groups, setGroups] = useState<any[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
-  const [inviteAll, setInviteAll] = useState(true);
+  const [inviteAll, setInviteAll] = useState(false);
   const [preParticipants, setPreParticipants] = useState<any[]>([null, null, null, null]);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
@@ -506,6 +506,8 @@ export default function CreateMatchPage() {
     return '#10b981';
   };
 
+  const isRainyHour = (entry: any) => ['weather_drizzle', 'weather_rain', 'weather_showers', 'weather_storm'].includes(entry?.labelKey);
+
   return (
     <div className="create-match-page">
       <div className="create-match-header">
@@ -566,25 +568,28 @@ export default function CreateMatchPage() {
                 const isSelected = index === selectedHourlyIndex;
                 const availability = availabilityByHour[entry.isoTime] || 'free';
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={entry.isoTime}
                     ref={(node) => { hourlyItemRefs.current[entry.isoTime] = node; }}
-                    className={`create-match-hourly-card ${isSelected ? 'is-selected' : ''}`}
+                    className={`create-match-hourly-card ${isSelected ? 'is-selected' : ''} ${isRainyHour(entry) ? 'is-rainy' : ''}`}
                     style={{
                       borderColor: isSelected ? `${primaryColor}aa` : `${getAvailabilityColor(availability)}55`,
                       boxShadow: isSelected
                         ? `0 0 0 1px ${primaryColor}55 inset, 0 0 18px ${primaryColor}25`
                         : undefined,
                     }}
+                    onClick={() => setTimeValue(entry.hour)}
                   >
                     <span className="create-match-hourly-time">{entry.hour}</span>
                     <WeatherIcon kind={entry.visualKind} isDay={entry.isDay} size={28} color={isSelected ? primaryColor : colors.textDim} />
                     <span className="create-match-hourly-temp">{entry.temperature ?? '--'}°C</span>
+                    {isRainyHour(entry) && <span className="create-match-hourly-rain-chip">{t(entry.labelKey)}</span>}
                     <span className={`create-match-hourly-status availability-${availability}`} style={{ color: getAvailabilityColor(availability) }}>
                       {t(`availability_${availability}` as any)}
                     </span>
                     {isSelected && <span className="create-match-hourly-tag">{t('weather_selected_hour')}</span>}
-                  </div>
+                  </button>
                 );
               })}
             </div>
